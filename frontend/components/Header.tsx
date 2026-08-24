@@ -1,7 +1,7 @@
 "use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Database, Cpu, X } from 'lucide-react';
 
 interface HeaderProps {
@@ -13,10 +13,74 @@ interface HeaderProps {
   onOpenModelHealth?: () => void;
 }
 
+function SearchBarInput({
+  activeTab,
+  setActiveTab,
+  searchQuery,
+  setSearchQuery
+}: {
+  activeTab: string;
+  setActiveTab?: (tab: string) => void;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [internalQuery, setInternalQuery] = useState<string>(searchQuery ?? searchParams.get('q') ?? "");
+
+  useEffect(() => {
+    if (searchQuery !== undefined) {
+      setInternalQuery(searchQuery);
+    }
+  }, [searchQuery]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    setInternalQuery(q);
+
+    if (setSearchQuery) {
+      setSearchQuery(q);
+      if (q.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
+        setActiveTab('anomalies');
+      }
+    } else {
+      if (q.trim()) {
+        router.push(`/anomalies?q=${encodeURIComponent(q)}`);
+      }
+    }
+  };
+
+  const handleClearSearch = () => {
+    setInternalQuery("");
+    if (setSearchQuery) setSearchQuery("");
+  };
+
+  return (
+    <div className="relative w-72">
+      <Search className="w-4 h-4 text-black absolute left-3 top-1/2 -translate-y-1/2 stroke-[3px]" />
+      <input
+        type="text"
+        value={internalQuery}
+        onChange={handleSearchChange}
+        placeholder="SEARCH CONSTITUENCY..."
+        className="w-full bg-white border-2 border-black text-xs font-bold pl-9 pr-8 py-1.5 text-black placeholder-black/50 focus:outline-none focus:bg-[#FFD93D] shadow-[3px_3px_0px_0px_#000] transition-all uppercase"
+      />
+      {internalQuery && (
+        <button
+          onClick={handleClearSearch}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black hover:bg-black hover:text-white p-0.5 font-black text-xs"
+        >
+          <X className="w-3.5 h-3.5 stroke-[3px]" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Header({
   activeTab,
   setActiveTab,
-  searchQuery = "",
+  searchQuery,
   setSearchQuery,
   onOpenDataSources,
   onOpenModelHealth
@@ -41,16 +105,6 @@ export default function Header({
       onOpenModelHealth();
     } else {
       router.push('/model-health');
-    }
-  };
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const q = e.target.value;
-    if (setSearchQuery) {
-      setSearchQuery(q);
-      if (q.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
-        setActiveTab('anomalies');
-      }
     }
   };
 
@@ -81,24 +135,18 @@ export default function Header({
 
       {/* Center Search & Status */}
       <div className="hidden md:flex items-center space-x-3 font-mono">
-        <div className="relative w-72">
-          <Search className="w-4 h-4 text-black absolute left-3 top-1/2 -translate-y-1/2 stroke-[3px]" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={handleSearchChange}
-            placeholder="SEARCH CONSTITUENCY..."
-            className="w-full bg-white border-2 border-black text-xs font-bold pl-9 pr-8 py-1.5 text-black placeholder-black/50 focus:outline-none focus:bg-[#FFD93D] shadow-[3px_3px_0px_0px_#000] transition-all uppercase"
+        <Suspense fallback={
+          <div className="w-72 bg-white border-2 border-black px-3 py-1.5 text-xs font-mono font-bold">
+            SEARCHING...
+          </div>
+        }>
+          <SearchBarInput
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery && setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black hover:bg-black hover:text-white p-0.5 font-black text-xs"
-            >
-              <X className="w-3.5 h-3.5 stroke-[3px]" />
-            </button>
-          )}
-        </div>
+        </Suspense>
 
         <div className="flex items-center space-x-2 text-xs font-black text-black bg-[#FFD93D] border-2 border-black px-3 py-1.5 shadow-[3px_3px_0px_0px_#000] uppercase">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-black animate-pulse"></span>
