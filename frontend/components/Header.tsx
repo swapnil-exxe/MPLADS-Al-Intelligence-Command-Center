@@ -92,6 +92,8 @@ function SearchBarInput({
     } catch {}
   };
 
+  // Trigger search on ENTER key or suggestion click:
+  // Shows search results by switching to 'anomalies' tab if needed!
   const triggerSearch = (queryText: string) => {
     setInternalQuery(queryText);
     saveRecentSearch(queryText);
@@ -99,8 +101,9 @@ function SearchBarInput({
 
     if (setSearchQuery) {
       setSearchQuery(queryText);
-      // NOTE: Do NOT automatically push or switch tabs to 'anomalies'.
-      // Keep the user on their currently active tab!
+      if (queryText.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps' && activeTab !== 'risk') {
+        setActiveTab('anomalies');
+      }
     } else {
       if (queryText.trim()) {
         router.push(`/anomalies?q=${encodeURIComponent(queryText)}`);
@@ -115,8 +118,7 @@ function SearchBarInput({
 
     if (setSearchQuery) {
       setSearchQuery(q);
-      // NOTE: Do NOT automatically push or switch tabs to 'anomalies'.
-      // Keep the user on their currently active tab!
+      // Live filter if already on directory tab
     }
   };
 
@@ -234,7 +236,7 @@ function SearchBarInput({
           {internalQuery.trim() !== "" && suggestions.length === 0 && (
             <div className="p-3 text-center text-black/70 font-bold text-xs bg-[#FFFDF5]">
               NO MATCHES FOR "{internalQuery.toUpperCase()}"
-              <p className="text-[10px] font-mono text-black/50 mt-1">Press Enter to search anyway</p>
+              <p className="text-[10px] font-mono text-black/50 mt-1">Press Enter to search all records</p>
             </div>
           )}
         </div>
