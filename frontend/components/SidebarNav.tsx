@@ -24,13 +24,13 @@ export default function SidebarNav({ activeTab, setActiveTab, highRiskCount = 42
   const router = useRouter();
 
   const navItems = [
-    { id: 'overview', label: 'OVERVIEW', icon: LayoutDashboard, path: '/' },
+    { id: 'overview', label: 'OVERVIEW', icon: LayoutDashboard, path: '/?tab=overview' },
     { id: 'risk', label: 'RISK INTELLIGENCE', icon: ShieldAlert, badge: highRiskCount, path: '/risk' },
     { id: 'anomalies', label: 'ANOMALIES', icon: AlertTriangle, path: '/anomalies' },
     { id: 'fraud', label: 'RELATIONSHIP SCOPE', icon: GitGraph, path: '/fraud' },
     { id: 'ai_investigator', label: 'INVESTIGATOR', icon: Sparkles, highlight: true, path: '/investigator' },
-    { id: 'states', label: 'STATE ANALYTICS', icon: MapPin, path: '/' },
-    { id: 'fund', label: 'FUND ANALYTICS', icon: BarChart3, path: '/' },
+    { id: 'states', label: 'STATE ANALYTICS', icon: MapPin, path: '/?tab=states' },
+    { id: 'fund', label: 'FUND ANALYTICS', icon: BarChart3, path: '/?tab=fund' },
     { id: 'data_sources', label: 'DATA SOURCES', icon: Database, path: '/data-sources' },
     { id: 'model_health', label: 'MODEL HEALTH', icon: Cpu, path: '/model-health' }
   ];
@@ -38,8 +38,7 @@ export default function SidebarNav({ activeTab, setActiveTab, highRiskCount = 42
   const handleNavClick = (item: typeof navItems[0]) => {
     if (setActiveTab) {
       setActiveTab(item.id);
-    }
-    if (item.path) {
+    } else if (item.path) {
       router.push(item.path);
     }
   };
@@ -58,6 +57,7 @@ export default function SidebarNav({ activeTab, setActiveTab, highRiskCount = 42
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => handleNavClick(item)}
                 className={`w-full flex items-center justify-between px-3 py-2.5 text-xs font-black uppercase transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${
                   isActive

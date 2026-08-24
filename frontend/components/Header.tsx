@@ -99,9 +99,8 @@ function SearchBarInput({
 
     if (setSearchQuery) {
       setSearchQuery(queryText);
-      if (queryText.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
-        setActiveTab('anomalies');
-      }
+      // NOTE: Do NOT automatically push or switch tabs to 'anomalies'.
+      // Keep the user on their currently active tab!
     } else {
       if (queryText.trim()) {
         router.push(`/anomalies?q=${encodeURIComponent(queryText)}`);
@@ -116,9 +115,8 @@ function SearchBarInput({
 
     if (setSearchQuery) {
       setSearchQuery(q);
-      if (q.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
-        setActiveTab('anomalies');
-      }
+      // NOTE: Do NOT automatically push or switch tabs to 'anomalies'.
+      // Keep the user on their currently active tab!
     }
   };
 

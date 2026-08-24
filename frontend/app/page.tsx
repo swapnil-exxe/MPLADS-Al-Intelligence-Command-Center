@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '../components/Header';
 import SidebarNav from '../components/SidebarNav';
 import OverviewMetrics from '../components/OverviewMetrics';
@@ -17,8 +18,10 @@ import { motion } from 'framer-motion';
 
 import { API_BASE } from '../lib/api';
 
-export default function CommandCenterPage() {
-  const [activeTab, setActiveTab] = useState<string>("overview");
+function MainContent() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || "overview";
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [kpis, setKpis] = useState<any | null>(null);
   const [stateAnalytics, setStateAnalytics] = useState<any[]>([]);
@@ -29,6 +32,14 @@ export default function CommandCenterPage() {
   const [showModelHealth, setShowModelHealth] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync tab from URL if present
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function loadData() {
@@ -254,5 +265,13 @@ export default function CommandCenterPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CommandCenterPage() {
+  return (
+    <Suspense fallback={<div className="p-4 font-mono font-bold text-xs">Loading Command Center...</div>}>
+      <MainContent />
+    </Suspense>
   );
 }
