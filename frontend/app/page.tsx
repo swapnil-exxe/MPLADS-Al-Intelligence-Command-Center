@@ -14,6 +14,8 @@ import AIInvestigatorChat from '../components/AIInvestigatorChat';
 import DataSourcesModal from '../components/DataSourcesModal';
 import ModelHealthCard from '../components/ModelHealthCard';
 import CapabilityScopeCard from '../components/CapabilityScopeCard';
+import StateAnalyticsView from '../components/StateAnalyticsView';
+import FundAnalyticsView from '../components/FundAnalyticsView';
 import { motion } from 'framer-motion';
 
 import { API_BASE } from '../lib/api';
@@ -196,18 +198,24 @@ function MainContent() {
             </div>
           )}
 
-          {/* TAB 6: STATES */}
+          {/* TAB 6: STATE ANALYTICS */}
           {activeTab === 'states' && (
             <div className="max-w-6xl mx-auto">
-              <IndiaRiskMap stateAnalytics={stateAnalytics} onSelectState={() => {}} />
+              <StateAnalyticsView
+                stateAnalytics={stateAnalytics}
+                onSelectState={() => setActiveTab('mps')}
+              />
             </div>
           )}
 
           {/* TAB 7: FUND ANALYTICS */}
           {activeTab === 'fund' && (
-            <div className="space-y-8 max-w-6xl mx-auto">
-              <OverviewMetrics kpis={kpis} highRiskCount={highRiskCount} />
-              <IndiaRiskMap stateAnalytics={stateAnalytics} onSelectState={() => {}} />
+            <div className="max-w-6xl mx-auto">
+              <FundAnalyticsView
+                kpis={kpis}
+                highRiskCount={highRiskCount}
+                anomalies={anomalies}
+              />
             </div>
           )}
 
