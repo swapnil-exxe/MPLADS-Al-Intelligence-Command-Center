@@ -1,72 +1,129 @@
-'use client';
+"use client";
 
 import React from 'react';
-import { CloudLightning, Volume2, Globe, ShieldAlert, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Database, Cpu, X } from 'lucide-react';
 
 interface HeaderProps {
-  language: string;
-  setLanguage: (lang: string) => void;
-  isEmergency: boolean;
-  onSimulateEmergency: () => void;
+  activeTab: string;
+  setActiveTab?: (tab: string) => void;
+  searchQuery?: string;
+  setSearchQuery?: (q: string) => void;
+  onOpenDataSources?: () => void;
+  onOpenModelHealth?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({
-  language,
-  setLanguage,
-  isEmergency,
-  onSimulateEmergency
-}) => {
+export default function Header({
+  activeTab,
+  setActiveTab,
+  searchQuery = "",
+  setSearchQuery,
+  onOpenDataSources,
+  onOpenModelHealth
+}: HeaderProps) {
+  const router = useRouter();
+
+  const handleBrandClick = () => {
+    if (setActiveTab) setActiveTab('overview');
+    router.push('/');
+  };
+
+  const handleDataSourcesClick = () => {
+    if (onOpenDataSources) {
+      onOpenDataSources();
+    } else {
+      router.push('/data-sources');
+    }
+  };
+
+  const handleModelHealthClick = () => {
+    if (onOpenModelHealth) {
+      onOpenModelHealth();
+    } else {
+      router.push('/model-health');
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const q = e.target.value;
+    if (setSearchQuery) {
+      setSearchQuery(q);
+      if (q.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
+        setActiveTab('anomalies');
+      }
+    }
+  };
+
   return (
-    <header className={`border-b transition-colors duration-500 px-4 py-3 ${
-      isEmergency ? 'bg-emergency-900 border-red-600' : 'bg-slate-900/90 border-slate-800'
-    }`}>
-      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Brand Title */}
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl ${isEmergency ? 'bg-red-600 animate-pulse' : 'bg-sky-500/20 text-sky-400 border border-sky-500/30'}`}>
-            <CloudLightning className="w-6 h-6" />
+    <header className="sticky top-0 z-40 bg-[#FFFDF5] border-b-4 border-black px-6 py-3 flex items-center justify-between font-['Space_Grotesk',sans-serif]">
+      {/* Brand & Authority */}
+      <div className="flex items-center space-x-4">
+        <div 
+          onClick={handleBrandClick}
+          className="flex items-center space-x-3 cursor-pointer group"
+        >
+          <div className="w-9 h-9 bg-[#FF6B6B] border-2 border-black flex items-center justify-center font-black text-black text-lg shadow-[3px_3px_0px_0px_#000]">
+            M
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-white">WEATHERGPT</h1>
-              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                SIH26068
+            <div className="flex items-center space-x-2">
+              <span className="font-black text-base uppercase text-black tracking-tight">MPLADS INTELLIGENCE</span>
+              <span className="text-[11px] font-bold text-black bg-[#FFD93D] px-2 py-0.5 border-2 border-black uppercase font-mono">
+                MoSPI · DIID
               </span>
             </div>
-            <p className="text-xs text-slate-400">Conversational AI Weather Intelligence & Decision Support</p>
-          </div>
-        </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
-          {/* Emergency Simulator Toggle Button */}
-          <button
-            onClick={onSimulateEmergency}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              isEmergency
-                ? 'bg-red-600 hover:bg-red-700 text-white animate-bounce'
-                : 'bg-slate-800 hover:bg-slate-700 text-red-400 border border-red-500/30'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            {isEmergency ? 'EMERGENCY MODE ACTIVE' : 'Simulate Disaster Mode'}
-          </button>
-
-          {/* Language Selector */}
-          <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700 rounded-lg px-2.5 py-1 text-xs">
-            <Globe className="w-4 h-4 text-slate-400" />
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent text-slate-200 focus:outline-none cursor-pointer font-medium"
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी (Hindi)</option>
-              <option value="mr">मराठी (Marathi)</option>
-            </select>
+            <p className="text-[11px] font-bold text-black uppercase tracking-wider hidden sm:block">
+              Official Dataset · 543 MPs · 36 States / UTs
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Center Search & Status */}
+      <div className="hidden md:flex items-center space-x-3 font-mono">
+        <div className="relative w-72">
+          <Search className="w-4 h-4 text-black absolute left-3 top-1/2 -translate-y-1/2 stroke-[3px]" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            placeholder="SEARCH CONSTITUENCY..."
+            className="w-full bg-white border-2 border-black text-xs font-bold pl-9 pr-8 py-1.5 text-black placeholder-black/50 focus:outline-none focus:bg-[#FFD93D] shadow-[3px_3px_0px_0px_#000] transition-all uppercase"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery && setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black hover:bg-black hover:text-white p-0.5 font-black text-xs"
+            >
+              <X className="w-3.5 h-3.5 stroke-[3px]" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2 text-xs font-black text-black bg-[#FFD93D] border-2 border-black px-3 py-1.5 shadow-[3px_3px_0px_0px_#000] uppercase">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-black animate-pulse"></span>
+          <span>SYSTEM MONITORING</span>
+        </div>
+      </div>
+
+      {/* Right Tools */}
+      <div className="flex items-center space-x-2 font-mono text-xs">
+        <button
+          onClick={handleDataSourcesClick}
+          className="flex items-center space-x-1.5 bg-white hover:bg-[#C4B5FD] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+        >
+          <Database className="w-4 h-4 stroke-[3px]" />
+          <span className="hidden sm:inline">DATA SOURCES</span>
+        </button>
+
+        <button
+          onClick={handleModelHealthClick}
+          className="flex items-center space-x-1.5 bg-white hover:bg-[#FFD93D] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+        >
+          <Cpu className="w-4 h-4 stroke-[3px]" />
+          <span className="hidden sm:inline">MODEL HEALTH</span>
+        </button>
+      </div>
     </header>
   );
-};
+}

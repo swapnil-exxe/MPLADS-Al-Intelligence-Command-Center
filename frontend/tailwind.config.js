@@ -7,18 +7,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f0f7ff',
-          100: '#e0effe',
-          500: '#0284c7',
-          600: '#0265d2',
-          900: '#0f172a',
-        },
-        emergency: {
-          500: '#ef4444',
-          600: '#dc2626',
-          900: '#450a0a',
+        neo: {
+          bg: '#FFFDF5',
+          ink: '#000000',
+          red: '#FF6B6B',
+          yellow: '#FFD93D',
+          violet: '#C4B5FD',
+          white: '#FFFFFF',
+          green: '#10B981',
+          amber: '#F59E0B',
+          darkred: '#DC2626',
         }
+      },
+      fontFamily: {
+        sans: ['"Space Grotesk"', 'sans-serif'],
+        mono: ['monospace'],
+      },
+      boxShadow: {
+        'neo-sm': '4px 4px 0px 0px #000000',
+        'neo': '8px 8px 0px 0px #000000',
+        'neo-lg': '12px 12px 0px 0px #000000',
+        'neo-xl': '16px 16px 0px 0px #000000',
+        'neo-white': '8px 8px 0px 0px #FFFFFF',
       }
     },
   },

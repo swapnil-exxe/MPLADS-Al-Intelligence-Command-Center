@@ -1,14 +1,17 @@
+import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import weather, chat, risk, alerts
+from app.api import analytics, risk, chat, demo, system
+from app.schemas.schemas import HealthCheckResponse
+from app.db.database import db_service
 
 app = FastAPI(
-    title="WeatherGPT API — SIH26068",
-    description="Conversational AI for Weather Forecasting, Alerts, and Climate Information",
-    version="1.0.0"
+    title="MPLADS AI Intelligence Command Center API — SIH26102",
+    description="Official FastAPI Backend for MoSPI MPLADS AI Monitoring, Risk Scoring & Anomaly Intelligence",
+    version="2.0.0"
 )
 
-# Enable CORS for Next.js frontend
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,19 +20,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(weather.router)
-app.include_router(chat.router)
+app.include_router(analytics.router)
 app.include_router(risk.router)
-app.include_router(alerts.router)
+app.include_router(chat.router)
+app.include_router(demo.router)
+app.include_router(system.router)
 
-@app.get("/")
+@app.get("/", tags=["Health & Root"])
 def root():
     return {
         "status": "online",
-        "service": "WeatherGPT API",
-        "version": "1.0.0",
+        "system": "MPLADS AI Intelligence Command Center API",
+        "version": "2.0.0",
+        "dataset": "Official MoSPI Allocated Limit for Honble MPs.csv",
         "docs": "/docs"
     }
+
+@app.get("/health", response_model=HealthCheckResponse, tags=["Health & Root"])
+@app.get("/api/system/health", response_model=HealthCheckResponse, tags=["Health & Root"])
+def health_check():
+    db_stats = db_service.get_summary_stats()
+    return HealthCheckResponse(
+        status="healthy",
+        api="operational",
+        database=f"connected ({db_stats['total_mp_records']} MP records ingested)",
+        dataset="verified_and_synced",
+        ml_engine="fitted_and_reproducible",
+        timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat()
+    )
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mplads_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: mplads_admin
+      POSTGRES_PASSWORD: secure_mplads_password
+      POSTGRES_DB: mplads_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mplads_admin -d mplads_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mplads_backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://mplads_admin:secure_mplads_password@postgres:5432/mplads_db
+      - PORT=8001
+      - ENVIRONMENT=production
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mplads_frontend
+    restart: always
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

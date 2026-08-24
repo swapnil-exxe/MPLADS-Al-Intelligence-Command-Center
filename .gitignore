@@ -19,6 +19,11 @@ env/
 .env
 .env.local
 .env.*.local
+backend/.env
+
+# Data & SQLite local files
+*.db
+backend/data/*.db
 
 # Logs
 *.log

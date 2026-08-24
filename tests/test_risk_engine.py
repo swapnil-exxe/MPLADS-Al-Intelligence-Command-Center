@@ -1,19 +1,28 @@
+import os
+import sys
 import pytest
-from app.core.risk_engine import calculate_weather_risk
 
-def test_risk_calculation_normal():
-    w_data = {"temperature": 28.0, "wind_speed": 10.0, "soil_moisture": 0.4, "rain": 0.0}
-    f_data = {"hourly": [{"precipitation": 0.0, "wind_speed": 10.0} for _ in range(24)]}
-    res = calculate_weather_risk(w_data, f_data, 19.0760, 72.8777)
-    
-    assert res["risk_level"] in ["LOW", "MODERATE"]
-    assert "overall_score" in res
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
+from app.services.real_data_service import real_data_service
+from app.ml.anomaly_detector import anomaly_detector
 
-def test_risk_calculation_extreme_puri():
-    # Puri has an active Red alert in IMD feed simulation
-    w_data = {"temperature": 26.0, "wind_speed": 50.0, "soil_moisture": 0.8, "rain": 25.0}
-    f_data = {"hourly": [{"precipitation": 12.0, "wind_speed": 65.0} for _ in range(24)]}
-    res = calculate_weather_risk(w_data, f_data, 19.8135, 85.8312)
-    
-    assert res["risk_level"] == "EXTREME"
-    assert res["is_emergency"] is True
+def test_risk_score_bounds_and_tiers():
+    results = anomaly_detector.fit_and_predict(real_data_service.df_mp)
+    for r in results:
+        score = r['risk_score']
+        assert 0.0 <= score <= 100.0
+        lvl = r['risk_level']
+        if score >= 81.0:
+            assert lvl == 'CRITICAL'
+        elif score >= 61.0:
+            assert lvl == 'HIGH'
+        elif score >= 31.0:
+            assert lvl == 'MEDIUM'
+        else:
+            assert lvl == 'LOW'
+
+def test_evidence_breakdown_presence():
+    results = anomaly_detector.fit_and_predict(real_data_service.df_mp)
+    for r in results:
+        assert 'evidence_breakdown' in r
+        assert len(r['evidence_breakdown']) >= 1

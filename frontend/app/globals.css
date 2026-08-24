@@ -1,35 +1,76 @@
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import 'leaflet/dist/leaflet.css';
+:root {
+  --neo-bg: #FFFDF5;
+  --neo-ink: #000000;
+  --neo-red: #FF6B6B;
+  --neo-yellow: #FFD93D;
+  --neo-violet: #C4B5FD;
+  --neo-white: #FFFFFF;
+}
 
 body {
-  background-color: #0b0f19;
-  color: #f3f4f6;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--neo-bg);
+  color: var(--neo-ink);
+  font-family: 'Space Grotesk', sans-serif;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  /* Subtle Neo-Brutalist Graph Paper Grid Background */
+  background-size: 36px 36px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
 }
 
-/* Custom Scrollbars */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #111827;
+  background: #FFFDF5;
+  border-left: 2px solid #000000;
 }
 ::-webkit-scrollbar-thumb {
-  background: #374151;
-  border-radius: 3px;
+  background: #000000;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FF6B6B;
 }
 
-/* Emergency Flashing Effect */
-@keyframes pulse-emergency {
-  0%, 100% { background-color: rgba(220, 38, 38, 0.2); }
-  50% { background-color: rgba(220, 38, 38, 0.4); }
+/* Neo-Brutalist Mechanical Active Push-Down Feedback */
+.btn-neo, button:active, a:active {
+  transition: all 100ms ease-out;
+}
+button:active, a:active {
+  transform: translate(3px, 3px) !important;
+  box-shadow: none !important;
 }
 
-.emergency-bg {
-  animation: pulse-emergency 2s infinite ease-in-out;
+/* Mechanical Card Lift on Hover */
+.card-neo-hover {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+.card-neo-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 10px 10px 0px 0px #000000 !important;
+}
+
+/* Hard Border Utility */
+.neo-border {
+  border: 4px solid #000000;
+}
+
+/* Accessibility Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

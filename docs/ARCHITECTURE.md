@@ -1,68 +1,46 @@
-# Technical Architecture — WeatherGPT (SIH26068)
+# MPLADS AI INTELLIGENCE COMMAND CENTER — SYSTEM ARCHITECTURE
+**Problem Statement ID**: SIH26102  
+**Organization**: Ministry of Statistics and Programme Implementation (MoSPI)  
+
+---
+
+## 1. System Architecture Overview
 
 ```
-                            ┌─────────────────────────────────────────┐
-                            │               USER                      │
-                            │   (Voice / Text Input / Map Click)      │
-                            └────────────────────┬────────────────────┘
-                                                 │
-                                                 ▼
-                            ┌─────────────────────────────────────────┐
-                            │    Next.js 14 Frontend Interface        │
-                            │   - Web Speech STT/TTS (En/Hi/Mr)       │
-                            │   - Leaflet.js Interactive GIS Map      │
-                            │   - Generative UI Card Renderer         │
-                            └────────────────────┬────────────────────┘
-                                                 │ REST / SSE API
-                                                 ▼
-                            ┌─────────────────────────────────────────┐
-                            │     FastAPI AI Orchestrator Backend     │
-                            │   - Intent Classification / Router      │
-                            │   - Language Translator / Localizer     │
-                            └───────┬─────────────────────────┬───────┘
-                                    │                         │
-            ┌───────────────────────┴──────┐           ┌──────┴───────────────────────┐
-            ▼                              ▼           ▼                              ▼
-┌───────────────────────┐      ┌────────────────────┐┌────────────────────┐      ┌───────────────────────┐
-│ Live Weather Engine   │      │ Historical Engine  ││ RAG Knowledge Engine│      │ Deterministic Risk    │
-│ - Open-Meteo API      │      │ - Open-Meteo ERA5  ││ - Chroma Vector DB │      │ Matrix Engine         │
-│ - IMD RSS Alerts Feed │      │   Reanalysis Data  ││ - Agromet Bulletins│      │ - Flood Score         │
-│ - Geocoding Service   │      │   (1940-Present)   ││ - Disaster Safety  │      │ - Heatwave Index      │
-└───────────┬───────────┘      └─────────┬──────────┘└─────────┬──────────┘      │ - Cyclone / Storm     │
-            │                            │                     │                 └───────────┬───────────┘
-            └────────────────────────────┼─────────────────────┴─────────────────────────────┘
-                                         │
-                                         ▼
-                            ┌─────────────────────────────────────────┐
-                            │      LLM Explanation & Structurer       │
-                            │  - Synthesizes Data + RAG Context       │
-                            │  - Returns Structured JSON + UI Props   │
-                            │  - Zero Hallucination Enforcement       │
-                            └────────────────────┬────────────────────┘
-                                                 │
-                                                 ▼
-                            ┌─────────────────────────────────────────┐
-                            │     Generative Response Generator       │
-                            │  - Dynamic Weather UI Widgets           │
-                            │  - Emergency Command Banner (If Extreme)│
-                            │  - Synthesized Localized Audio Speech   │
-                            └─────────────────────────────────────────┘
+                      USER / SIH JUDGE
+                            │
+                            ▼
+              Next.js 14 Web Command Center
+     (Tailwind CSS + Emil Kowalski Motion + Lucide Icons)
+                            │
+                            ▼
+               FastAPI AI Orchestrator (v2.0)
+     ┌──────────────────────┼──────────────────────┐
+     ▼                      ▼                      ▼
+RealDataService       AnomalyDetector       AIInvestigator
+ (Pandas/CSV)      (IsoForest/LOF/ZScore)   (Grounded RAG)
+     │                      │                      │
+     └──────────────────────┼──────────────────────┘
+                            ▼
+               Isolated Demo Simulation Layer
+            (Explicit Disclosure Badges Enforced)
 ```
 
-## Modular System Breakdown
+---
 
-1. **Frontend Tier (Next.js 14 + Tailwind CSS + Leaflet.js)**:
-   - Client-side Web Speech recognition for `en-IN`, `hi-IN`, `mr-IN`.
-   - Interactive GIS Leaflet map with custom weather tiles and click-to-query event binding.
-   - Generative UI components for Hourly Chart, Daily Cards, Risk Meter, Sector Cards, and Emergency Mode.
+## 2. Component Design & Responsibilities
 
-2. **Backend Services (FastAPI + Async Python)**:
-   - `open_meteo.py`: Service for current weather, 7-day hourly forecast, 16-day daily forecast, and historical ERA5 climate trends.
-   - `imd_feed.py`: Official alert parsing and RSS warning monitor.
-   - `risk_engine.py`: Multi-factor deterministic risk calculator.
-   - `rag_engine.py`: ChromaDB semantic search interface.
-   - `llm_service.py`: Gemini / OpenAI function calling engine and zero-hallucination prompt orchestrator.
-
-3. **Data & Storage Tier**:
-   - SQLite / PostgreSQL for saved locations and audit logs.
-   - ChromaDB vector store for agricultural guides, NDMA protocols, and terminology.
+1. **Real Data Pipeline (`real_data_service.py`)**:
+   - Ingests `Allocated_Limit_for_Honble_MPs.csv` containing 543 MP records and ₹83,06,21,04,294.53 total allocation.
+   - Cleans numeric amounts, handles Row 108 null values, deduplicates Nanded constituency entries, and aggregates 36 State/UT summary metrics.
+2. **Machine Learning Anomaly Engine (`anomaly_detector.py`)**:
+   - Scikit-learn **Isolation Forest** (contamination=0.08)
+   - **Local Outlier Factor (LOF)** (n_neighbors=20)
+   - **Statistical Z-Score Analysis** (|Z| > 2.0)
+   - Operates strictly on verified features (`allocated_amount`, `dev_baseline`, `dev_state_mean`, `z_score_nat`).
+3. **Grounded AI Investigator (`ai_investigator.py`)**:
+   - Executes backend tool queries against real MoSPI dataset metrics.
+   - Returns explicit boundary notices if query requests out-of-scope dataset features (contractors, live GPS, payment transactions).
+4. **Isolated Demo Layer (`demo_data_service.py`)**:
+   - Holds 100 simulated micro-project records and fraud relationship graph.
+   - Every returned record contains mandatory label: `"DEMO SIMULATION — NOT DERIVED FROM OFFICIAL MPLADS DATA"`.
