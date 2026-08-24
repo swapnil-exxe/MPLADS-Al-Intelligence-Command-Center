@@ -5,6 +5,13 @@
 
 ---
 
+## 📚 Comprehensive Master Technical Guide
+
+📖 **Complete 33-Part Architecture & Explanation Guide**:  
+👉 [`docs/MASTER_ARCHITECTURE_GUIDE.md`](file:///Users/swapnil/Base%20Zero/docs/MASTER_ARCHITECTURE_GUIDE.md) — *Detailed presentation manual covering system architecture, mathematical ML formulas, database schema, data flow sequences, viva Q&A, and 2-minute summary.*
+
+---
+
 ## 🌟 Executive Overview & Production Status
 
 - 🛡️ **Unsupervised Allocation Anomaly Detection**: Evaluates official MoSPI Member of Parliament allocation limits ($543$ MPs across $36$ States/UTs, $\text{₹}8,306.21\text{ Cr}$ Total Allocation) without ungrounded accuracy claims.
@@ -57,6 +64,22 @@
                                    ▼
                  FastAPI Backend ↔ Next.js Command UI
                      (Port 8001)        (Port 3000)
+```
+
+---
+
+## 📁 Repository Structure Overview
+
+```
+Base Zero/
+├── 📁 frontend/                         # Next.js 14 App Router + React 18 + Tailwind CSS
+├── 📁 backend/                          # FastAPI Backend Application Root
+│   ├── 📁 ml/                           # 🌟 Dedicated ML Model Engine Package
+│   ├── 📁 app/                          # FastAPI Modules (api, db, services)
+│   └── 📁 data/                         # Official Gazette CSV (Allocated_Limit_for_Honble_MPs.csv)
+├── 📁 scripts/                          # Cloud Batch Migration Scripts
+├── 📁 tests/                            # Pytest Automated Test Suite (32 Tests)
+└── 📁 docs/                             # Architecture & Master Technical Guides
 ```
 
 ---
