@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Database, Cpu, X } from 'lucide-react';
+import { Search, Database, Cpu, X, Clock, Trash2, MapPin, User } from 'lucide-react';
+import { API_BASE } from '../lib/api';
 
 interface HeaderProps {
   activeTab: string;
@@ -26,27 +27,104 @@ function SearchBarInput({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [internalQuery, setInternalQuery] = useState<string>(searchQuery ?? searchParams.get('q') ?? "");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const [internalQuery, setInternalQuery] = useState<string>(searchQuery ?? searchParams.get('q') ?? "");
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [allMPs, setAllMPs] = useState<any[]>([]);
+
+  // Load Recent Searches from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mplads_recent_searches');
+      if (saved) {
+        setRecentSearches(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+  // Fetch MP directory for autocomplete suggestions
+  useEffect(() => {
+    fetch(`${API_BASE}/api/risk/anomalies`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.anomalies) {
+          setAllMPs(data.anomalies);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Sync external searchQuery prop
   useEffect(() => {
     if (searchQuery !== undefined) {
       setInternalQuery(searchQuery);
     }
   }, [searchQuery]);
 
+  // Click outside listener
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    const updated = [trimmed, ...recentSearches.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
+    setRecentSearches(updated);
+    try {
+      localStorage.setItem('mplads_recent_searches', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const clearRecentSearches = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem('mplads_recent_searches');
+    } catch {}
+  };
+
+  const triggerSearch = (queryText: string) => {
+    setInternalQuery(queryText);
+    saveRecentSearch(queryText);
+    setIsOpen(false);
+
+    if (setSearchQuery) {
+      setSearchQuery(queryText);
+      if (queryText.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
+        setActiveTab('anomalies');
+      }
+    } else {
+      if (queryText.trim()) {
+        router.push(`/anomalies?q=${encodeURIComponent(queryText)}`);
+      }
+    }
+  };
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
     setInternalQuery(q);
+    setIsOpen(true);
 
     if (setSearchQuery) {
       setSearchQuery(q);
       if (q.trim() && setActiveTab && activeTab !== 'anomalies' && activeTab !== 'mps') {
         setActiveTab('anomalies');
       }
-    } else {
-      if (q.trim()) {
-        router.push(`/anomalies?q=${encodeURIComponent(q)}`);
-      }
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      triggerSearch(internalQuery);
     }
   };
 
@@ -55,23 +133,113 @@ function SearchBarInput({
     if (setSearchQuery) setSearchQuery("");
   };
 
+  // Filter MP Autocomplete suggestions based on query
+  const suggestions = internalQuery.trim()
+    ? allMPs.filter(mp =>
+        mp.mp_name.toLowerCase().includes(internalQuery.toLowerCase()) ||
+        mp.constituency.toLowerCase().includes(internalQuery.toLowerCase()) ||
+        mp.state.toLowerCase().includes(internalQuery.toLowerCase())
+      ).slice(0, 6)
+    : [];
+
   return (
-    <div className="relative w-72">
-      <Search className="w-4 h-4 text-black absolute left-3 top-1/2 -translate-y-1/2 stroke-[3px]" />
-      <input
-        type="text"
-        value={internalQuery}
-        onChange={handleSearchChange}
-        placeholder="SEARCH CONSTITUENCY..."
-        className="w-full bg-white border-2 border-black text-xs font-bold pl-9 pr-8 py-1.5 text-black placeholder-black/50 focus:outline-none focus:bg-[#FFD93D] shadow-[3px_3px_0px_0px_#000] transition-all uppercase"
-      />
-      {internalQuery && (
-        <button
-          onClick={handleClearSearch}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black hover:bg-black hover:text-white p-0.5 font-black text-xs"
-        >
-          <X className="w-3.5 h-3.5 stroke-[3px]" />
-        </button>
+    <div className="relative w-72" ref={dropdownRef}>
+      <div className="relative">
+        <Search className="w-4 h-4 text-black absolute left-3 top-1/2 -translate-y-1/2 stroke-[3px]" />
+        <input
+          type="text"
+          value={internalQuery}
+          onFocus={() => setIsOpen(true)}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          placeholder="SEARCH CONSTITUENCY..."
+          className="w-full bg-white border-2 border-black text-xs font-bold pl-9 pr-8 py-1.5 text-black placeholder-black/50 focus:outline-none focus:bg-[#FFD93D] shadow-[3px_3px_0px_0px_#000] transition-all uppercase"
+        />
+        {internalQuery && (
+          <button
+            onClick={handleClearSearch}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-black hover:bg-black hover:text-white p-0.5 font-black text-xs"
+          >
+            <X className="w-3.5 h-3.5 stroke-[3px]" />
+          </button>
+        )}
+      </div>
+
+      {/* Popover Suggestions & Recent Searches Dropdown */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border-4 border-black shadow-[4px_4px_0px_0px_#000] z-50 max-h-72 overflow-y-auto font-mono text-xs">
+          {/* Section 1: Live Autocomplete Suggestions */}
+          {suggestions.length > 0 && (
+            <div>
+              <div className="bg-[#FFD93D] px-3 py-1 font-black text-[10px] uppercase border-b-2 border-black text-black">
+                MATCHING CONSTITUENCIES & MPs ({suggestions.length})
+              </div>
+              {suggestions.map((mp, i) => (
+                <div
+                  key={i}
+                  onClick={() => triggerSearch(mp.constituency || mp.mp_name)}
+                  className="px-3 py-2 hover:bg-[#FFE600] cursor-pointer border-b border-black/20 flex flex-col justify-center transition-colors"
+                >
+                  <div className="flex items-center justify-between font-bold text-black">
+                    <span className="truncate flex items-center gap-1">
+                      <User className="w-3 h-3 text-black shrink-0" />
+                      {mp.mp_name}
+                    </span>
+                    <span className={`text-[9px] px-1.5 py-0.2 border border-black font-mono font-black ${
+                      mp.risk_level === 'CRITICAL' ? 'bg-red-500 text-white' :
+                      mp.risk_level === 'HIGH' ? 'bg-amber-400 text-black' :
+                      'bg-emerald-300 text-black'
+                    }`}>
+                      {mp.risk_level}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-[10px] text-black/70 font-semibold gap-1">
+                    <MapPin className="w-2.5 h-2.5 text-black shrink-0" />
+                    <span>{mp.constituency} · {mp.state}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Section 2: Recent Searches */}
+          {internalQuery.trim() === "" && recentSearches.length > 0 && (
+            <div>
+              <div className="bg-[#C4B5FD] px-3 py-1 font-black text-[10px] uppercase border-b-2 border-black flex justify-between items-center text-black">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> RECENT SEARCHES
+                </span>
+                <button
+                  onClick={clearRecentSearches}
+                  className="text-[9px] hover:underline flex items-center gap-0.5 text-black"
+                >
+                  <Trash2 className="w-2.5 h-2.5" /> CLEAR
+                </button>
+              </div>
+              {recentSearches.map((term, i) => (
+                <div
+                  key={i}
+                  onClick={() => triggerSearch(term)}
+                  className="px-3 py-2 hover:bg-[#FFFDF5] cursor-pointer border-b border-black/20 flex items-center justify-between font-bold text-black"
+                >
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <Search className="w-3 h-3 text-black/60 stroke-[3px]" />
+                    {term}
+                  </span>
+                  <span className="text-[10px] text-black/50 font-mono">USE</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Section 3: Empty State */}
+          {internalQuery.trim() !== "" && suggestions.length === 0 && (
+            <div className="p-3 text-center text-black/70 font-bold text-xs bg-[#FFFDF5]">
+              NO MATCHES FOR "{internalQuery.toUpperCase()}"
+              <p className="text-[10px] font-mono text-black/50 mt-1">Press Enter to search anyway</p>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
