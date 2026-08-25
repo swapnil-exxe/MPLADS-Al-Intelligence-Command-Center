@@ -17,13 +17,7 @@ class AIInvestigator:
         self.groq_api_base = os.getenv("GROQ_API_BASE", "https://api.groq.com/openai/v1")
 
     def _call_groq_api(self, user_prompt: str, context_str: str, groq_key: str) -> Optional[str]:
-        """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1/chat/completions."""
-        url = f"{self.groq_api_base.rstrip('/')}/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {groq_key.strip()}",
-            "Content-Type": "application/json"
-        }
-
+        """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1 using OpenAI SDK client."""
         system_instruction = (
             "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant (SIH26102).\n"
             "Your answers MUST be strictly grounded in the official MoSPI dataset metrics provided below.\n"
@@ -35,7 +29,39 @@ class AIInvestigator:
             "5. Cite the official source: Allocated Limit for Honble MPs.csv."
         )
 
-        models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]
+        models_to_try = ["llama-3.3-70b-versatile", "openai/gpt-oss-20b", "llama3-70b-8192", "llama3-8b-8192"]
+
+        # 1. Try OpenAI SDK Client with Groq Base URL
+        try:
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=groq_key.strip(),
+                base_url=self.groq_api_base
+            )
+            for model_name in models_to_try:
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_instruction},
+                            {"role": "user", "content": f"GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
+                        ],
+                        temperature=0.2,
+                        max_tokens=800
+                    )
+                    if response.choices and response.choices[0].message.content:
+                        return response.choices[0].message.content
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # 2. Fallback Direct HTTP Request
+        url = f"{self.groq_api_base.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key.strip()}",
+            "Content-Type": "application/json"
+        }
         for model_name in models_to_try:
             payload = {
                 "model": model_name,
