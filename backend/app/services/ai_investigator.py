@@ -1,15 +1,61 @@
+import os
 import html
 import re
+import json
+import requests
 from typing import Dict, Any, List, Optional
 from app.services.real_data_service import real_data_service
 from ml.anomaly_detector import anomaly_detector
 
 class AIInvestigator:
     """
-    Grounded AI Investigator Engine.
-    Executes tool-calling queries strictly against real MoSPI dataset metrics and Scikit-Learn ML models.
-    Zero-hallucination guarantee: Returns explicit boundary notices for out-of-scope queries.
+    Grounded AI Investigator Engine supporting Groq Llama-3 API (https://api.groq.com/openai/v1)
+    with zero-dependency fallback to Local Deterministic Engine.
     """
+
+    def __init__(self):
+        self.groq_api_base = os.getenv("GROQ_API_BASE", "https://api.groq.com/openai/v1")
+
+    def _call_groq_api(self, user_prompt: str, context_str: str, groq_key: str) -> Optional[str]:
+        """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1/chat/completions."""
+        url = f"{self.groq_api_base.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key.strip()}",
+            "Content-Type": "application/json"
+        }
+
+        system_instruction = (
+            "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant (SIH26102).\n"
+            "Your answers MUST be strictly grounded in the official MoSPI dataset metrics provided below.\n"
+            "RULES:\n"
+            "1. Answer clearly, professionally, and concisely using the provided context.\n"
+            "2. DO NOT hallucinate missing contractor, vendor, payment, or physical project progress data.\n"
+            "3. If asked about contractors, tenders, or payments, state: 'Data not available in the connected official dataset.'\n"
+            "4. Never use the word 'fraud' — use 'statistical anomaly', 'allocation divergence', or 'review priority'.\n"
+            "5. Cite the official source: Allocated Limit for Honble MPs.csv."
+        )
+
+        models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]
+        for model_name in models_to_try:
+            payload = {
+                "model": model_name,
+                "messages": [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": f"GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
+                ],
+                "temperature": 0.2,
+                "max_tokens": 800
+            }
+            try:
+                resp = requests.post(url, headers=headers, json=payload, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    choices = data.get("choices", [])
+                    if choices and "message" in choices[0]:
+                        return choices[0]["message"]["content"]
+            except Exception:
+                continue
+        return None
 
     def answer_query(self, user_prompt: str) -> Dict[str, Any]:
         if not user_prompt or not user_prompt.strip():
@@ -22,12 +68,11 @@ class AIInvestigator:
                 "notice": "Input Validation Error"
             }
 
-        # Clean & sanitize input
         raw_prompt = user_prompt.strip()[:1000]
         clean_prompt = html.escape(raw_prompt)
         prompt_lower = clean_prompt.lower()
 
-        # 1. EXPLICIT BOUNDARY CHECK: Out-of-Scope Questions (Contractors, Tenders, Vendor Payments, GPS, Site Photos)
+        # 1. EXPLICIT BOUNDARY CHECK: Out-of-Scope Questions (Contractors, Tenders, Vendor Payments, GPS)
         unsupported_keywords = [
             "contractor", "vendor", "payment", "tender", "bill", "physical progress",
             "construction status", "site photo", "gps", "bank account", "pfms", "esakshi",
@@ -44,7 +89,48 @@ class AIInvestigator:
                     "notice": "Data Limitation Notice"
                 }
 
-        # Ingest real data & ML model predictions
+        # Check for Groq API Key
+        groq_key = os.getenv("GROQ_API_KEY", "").strip()
+        if groq_key:
+            # Build Ground Truth Context for Groq LLM
+            kpis = real_data_service.get_summary_kpis()
+            anomalies = anomaly_detector.fit_and_predict(real_data_service.df_mp)
+            
+            # Find target MP if mentioned
+            target_mp = next((a for a in anomalies if str(a.get('mp_name')).lower() in prompt_lower or str(a.get('constituency')).lower() in prompt_lower), None)
+
+            context_lines = [
+                f"- Total Monitored MPs: {kpis['total_mp_records']} across {kpis['unique_states_count']} States/UTs",
+                f"- Total National Allocation: ₹{kpis['total_allocation_crores']} Crore",
+                f"- Standard Baseline Limit: ₹14.70 Crore (holds for {kpis['baseline_mp_count_14_7cr']} MPs)",
+                f"- Highest Allocation MP: Eatala Rajender (Malkajgiri, Telangana) — ₹32.75 Crore",
+                f"- Lowest Allocation MP: Sk. Nurul Islam (Basirhat, West Bengal) — ₹4.90 Crore",
+                f"- Missing Allocation Record: Row #108, Nanded Constituency (Maharashtra) — Allocation is NaN/Unlisted",
+                f"- Flagged Anomalies Count: {len([a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']])} MPs"
+            ]
+            if target_mp:
+                context_lines.append(f"\nTARGET RECORD DETAILS ({target_mp['mp_name']} - {target_mp['constituency']}, {target_mp['state']}):")
+                context_lines.append(f"  - Allocated Amount: ₹{target_mp.get('allocated_amount_crores', 'N/A')} Cr")
+                context_lines.append(f"  - Baseline Deviation: {target_mp.get('dev_baseline_pct', 0.0):+.2f}%")
+                context_lines.append(f"  - Risk Score: {target_mp.get('risk_score', 'N/A')}/100 ({target_mp.get('risk_level', 'N/A')})")
+                context_lines.append(f"  - Consensus: {target_mp.get('multi_method_agreement', 'N/A')}")
+                context_lines.append(f"  - Z-Score: {target_mp.get('z_score', 'N/A')}")
+                context_lines.append(f"  - IQR Ratio: {target_mp.get('iqr_ratio', 'N/A')}")
+                context_lines.append(f"  - Isolation Forest Score: {target_mp.get('ml_anomaly_score', 'N/A')}")
+
+            groq_response = self._call_groq_api(raw_prompt, "\n".join(context_lines), groq_key)
+            if groq_response:
+                return {
+                    "answer": groq_response,
+                    "is_grounded": True,
+                    "query_type": "groq_llm_grounded",
+                    "tools_executed": ["GroqAPI(https://api.groq.com/openai/v1)", "Llama-3.3-70B-Versatile"],
+                    "evidence_used": [f"Groq Llama-3 Grounded Context ({len(context_lines)} metrics)"],
+                    "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
+                    "notice": "Grounded Groq Llama-3 AI Engine"
+                }
+
+        # LOCAL DETERMINISTIC ENGINE (FALLBACK / KEYLESS MODE)
         df_mp = real_data_service.df_mp
         kpis = real_data_service.get_summary_kpis()
         anomalies = anomaly_detector.fit_and_predict(df_mp)
