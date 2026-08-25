@@ -98,10 +98,19 @@ class AIInvestigator:
                 "notice": "Input Validation Error"
             }
 
-        # Clean & sanitize input
         raw_prompt = user_prompt.strip()[:1000]
         clean_prompt = html.escape(raw_prompt)
-        prompt_lower = clean_prompt.lower()
+        raw_lower = clean_prompt.lower()
+
+        # Typo Normalization (hight -> high, rick -> risk, peopel -> people, lisst -> list)
+        prompt_lower = (
+            raw_lower
+            .replace("hight", "high")
+            .replace("rick", "risk")
+            .replace("peopel", "people")
+            .replace("lisst", "list")
+            .replace("malkagiri", "malkajgiri")
+        )
 
         # 0. GREETING HANDLER (hi, hello, hii, hey, greetings, who are you)
         greetings = ["hi", "hii", "hello", "hey", "greetings", "good morning", "good afternoon", "who are you"]
@@ -145,12 +154,16 @@ class AIInvestigator:
         # Check for Groq API Key
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
         if groq_key:
-            # Build Ground Truth Context for Groq LLM
+            # Build Rich Ground Truth Context for Groq LLM
             kpis = real_data_service.get_summary_kpis()
             anomalies = anomaly_detector.fit_and_predict(real_data_service.df_mp)
             
             # Find target MP if mentioned
             target_mp = next((a for a in anomalies if str(a.get('mp_name')).lower() in prompt_lower or str(a.get('constituency')).lower() in prompt_lower), None)
+
+            high_risk_list = [a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']]
+            high_risk_list.sort(key=lambda x: x['risk_score'], reverse=True)
+            top_hr = high_risk_list[:15]
 
             context_lines = [
                 f"- Total Monitored MPs: {kpis['total_mp_records']} across {kpis['unique_states_count']} States/UTs",
@@ -159,8 +172,14 @@ class AIInvestigator:
                 f"- Highest Allocation MP: Eatala Rajender (Malkajgiri, Telangana) — ₹32.75 Crore",
                 f"- Lowest Allocation MP: Sk. Nurul Islam (Basirhat, West Bengal) — ₹4.90 Crore",
                 f"- Missing Allocation Record: Row #108, Nanded Constituency (Maharashtra) — Allocation is NaN/Unlisted",
-                f"- Flagged Anomalies Count: {len([a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']])} MPs"
+                f"- Flagged Anomalies Count: {len(high_risk_list)} MPs",
+                "\nTOP HIGH-RISK ALLOCATION RECORDS (FLAGGED ANOMALIES):"
             ]
+
+            for idx, c in enumerate(top_hr, 1):
+                alloc_v = f"₹{c['allocated_amount_crores']:.2f} Cr" if c['allocated_amount_crores'] is not None else "Missing"
+                context_lines.append(f"  {idx}. MP: {c['mp_name']} | Constituency: {c['constituency']} ({c['state']}) | Allocation: {alloc_v} | Risk Score: {c['risk_score']}/100 ({c['risk_level']}) | Signal: {c['signal_type']}")
+
             if target_mp:
                 context_lines.append(f"\nTARGET RECORD DETAILS ({target_mp['mp_name']} - {target_mp['constituency']}, {target_mp['state']}):")
                 context_lines.append(f"  - Allocated Amount: ₹{target_mp.get('allocated_amount_crores', 'N/A')} Cr")
@@ -346,7 +365,32 @@ class AIInvestigator:
                 "notice": "Grounded strictly in verified MoSPI allocation limits."
             }
 
-        # 7. STATE COMPARISON OR STATE QUERY
+        # 7. HIGH RISK / ANOMALY SUMMARY QUERY
+        if any(w in prompt_lower for w in ["high risk", "risk", "anomalous", "anomalies", "flagged", "risk records", "high risk list", "risk people", "people list", "top risk"]):
+            high_risk_mps = [a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']]
+            high_risk_mps.sort(key=lambda x: x['risk_score'], reverse=True)
+            top_cases = high_risk_mps[:10]
+
+            lines = [f"**MPLADS Statistical Allocation Risk Signals ({len(high_risk_mps)} Flagged MPs Total)**:\n"]
+            for idx, c in enumerate(top_cases, 1):
+                alloc_v = f"₹{c['allocated_amount_crores']:.2f} Cr" if c['allocated_amount_crores'] is not None else "Missing"
+                lines.append(f"{idx}. **{c['mp_name']}** ({c['constituency'].title()}, {c['state']}) — {alloc_v}")
+                lines.append(f"   - **Risk Score**: **{c['risk_score']}/100** ({c['risk_level']}) · {c.get('multi_method_agreement', '2/3 Methods')}")
+                lines.append(f"   - **Primary Signal**: {c['signal_type']}\n")
+
+            lines.append("*Interpretation Notice: These are model-generated statistical allocation signals requiring human verification, not proof of fraud.*")
+
+            return {
+                "answer": "\n".join(lines),
+                "is_grounded": True,
+                "query_type": "high_risk_investigation",
+                "tools_executed": ["anomaly_detector.fit_and_predict"],
+                "evidence_used": [f"{c['mp_name']} ({c['constituency']}): Risk Score {c['risk_score']}/100" for c in top_cases],
+                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
+                "notice": "Unsupervised ML Anomaly Signals"
+            }
+
+        # 8. STATE COMPARISON OR STATE QUERY
         if "compare" in prompt_lower or any(word in prompt_lower for word in ["state allocation", "maharashtra", "gujarat", "telangana", "uttar pradesh"]):
             mentioned_states = [s['state'] for s in states_analytics if s['state'].lower() in prompt_lower]
             if len(mentioned_states) >= 2:
@@ -397,31 +441,6 @@ class AIInvestigator:
                 "evidence_used": [f"{s['state']}: ₹{s['total_allocation_crores']} Cr" for s in states_analytics[:3]],
                 "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
                 "notice": "Aggregated State Entitlement Metrics"
-            }
-
-        # 8. HIGH RISK / ANOMALY SUMMARY QUERY
-        if any(w in prompt_lower for w in ["high risk", "anomalous", "anomalies", "flagged mps", "risk records"]):
-            high_risk_mps = [a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']]
-            high_risk_mps.sort(key=lambda x: x['risk_score'], reverse=True)
-            top_cases = high_risk_mps[:5]
-
-            lines = [f"**MPLADS Statistical Allocation Risk Signals ({len(high_risk_mps)} Flagged MPs Total)**:\n"]
-            for idx, c in enumerate(top_cases, 1):
-                alloc_v = f"₹{c['allocated_amount_crores']:.2f} Cr" if c['allocated_amount_crores'] is not None else "Missing"
-                lines.append(f"{idx}. **{c['mp_name']}** ({c['constituency'].title()}, {c['state']}) — {alloc_v}")
-                lines.append(f"   - **Risk Score**: **{c['risk_score']}/100** ({c['risk_level']}) · {c.get('multi_method_agreement', '2/3 Methods')}")
-                lines.append(f"   - **Primary Signal**: {c['signal_type']}\n")
-
-            lines.append("*Interpretation Notice: These are model-generated statistical allocation signals requiring human verification, not proof of fraud.*")
-
-            return {
-                "answer": "\n".join(lines),
-                "is_grounded": True,
-                "query_type": "high_risk_investigation",
-                "tools_executed": ["anomaly_detector.fit_and_predict"],
-                "evidence_used": [f"{c['mp_name']} ({c['constituency']}): Risk Score {c['risk_score']}/100" for c in top_cases],
-                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
-                "notice": "Unsupervised ML Anomaly Signals"
             }
 
         # 9. SEARCH FOR SPECIFIC UNKNOWN MP/CONSTITUENCY SEARCH (e.g., "Atlantis", "Batman")
