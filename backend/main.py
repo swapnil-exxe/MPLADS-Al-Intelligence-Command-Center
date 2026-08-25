@@ -67,7 +67,7 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown()
 
 app = FastAPI(
-    title="MPLADS AI Intelligence Command Center API — SIH26102",
+    title="MPLADS AI Intelligence Command Center API",
     description="Official FastAPI Backend for MoSPI MPLADS AI Monitoring, Risk Scoring & Anomaly Intelligence",
     version="2.0.0",
     lifespan=lifespan

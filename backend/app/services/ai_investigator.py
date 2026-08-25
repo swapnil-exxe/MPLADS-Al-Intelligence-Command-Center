@@ -23,7 +23,7 @@ class AIInvestigator:
     def _call_groq_api(self, user_prompt: str, context_str: str, groq_key: str) -> Optional[str]:
         """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1 using OpenAI SDK client."""
         system_instruction = (
-            "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant (SIH26102).\n"
+            "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant.\n"
             "Your answers MUST be strictly grounded in the official MoSPI dataset metrics provided below.\n"
             "RULES:\n"
             "1. Answer clearly, professionally, and concisely using the provided context.\n"
@@ -117,7 +117,7 @@ class AIInvestigator:
         if prompt_lower in greetings or prompt_lower.startswith("hi ") or prompt_lower.startswith("hello ") or prompt_lower == "hi!":
             return {
                 "answer": (
-                    "**Hello! I am the MoSPI MPLADS AI Intelligence Assistant (SIH26102)**.\n\n"
+                    "**Hello! I am the MoSPI MPLADS AI Intelligence Assistant**.\n\n"
                     "I am connected to the official MoSPI Gazette dataset (**543 MPs, ₹8,306.21 Crore Total Allocation**) and Scikit-Learn anomaly detectors.\n\n"
                     "**How I can assist you**:\n"
                     "• **MP & Constituency Risk Audits**: Ask *'Why is Malkajgiri showing an anomaly?'* or *'What is the allocation of Eatala Rajender?'*\n"
