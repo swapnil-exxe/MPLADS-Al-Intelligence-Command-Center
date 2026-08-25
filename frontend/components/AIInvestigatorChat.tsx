@@ -5,7 +5,7 @@ import { Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-import { API_BASE } from '../lib/api';
+import { API_BASE, apiFetch } from '../lib/api';
 
 export default function AIInvestigatorChat() {
   const [query, setQuery] = useState<string>("");
@@ -48,7 +48,7 @@ export default function AIInvestigatorChat() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/ai/investigate`, {
+      const res = await apiFetch('/api/ai/investigate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: promptText })

@@ -7,7 +7,7 @@ import SidebarNav from '../../components/SidebarNav';
 import AnomalyMatrix from '../../components/AnomalyMatrix';
 import InvestigationWorkspace from '../../components/InvestigationWorkspace';
 
-import { API_BASE } from '../../lib/api';
+import { API_BASE, apiFetch } from '../../lib/api';
 
 function AnomaliesContent() {
   const searchParams = useSearchParams();
@@ -17,7 +17,7 @@ function AnomaliesContent() {
   const [selectedMP, setSelectedMP] = useState<any | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/risk/anomalies`)
+    apiFetch('/api/risk/anomalies')
       .then(res => res.json())
       .then(data => setAnomalies(data.anomalies || []))
       .catch(() => {});

@@ -18,7 +18,7 @@ import StateAnalyticsView from '../components/StateAnalyticsView';
 import FundAnalyticsView from '../components/FundAnalyticsView';
 import { motion } from 'framer-motion';
 
-import { API_BASE } from '../lib/api';
+import { API_BASE, apiFetch } from '../lib/api';
 
 function MainContent() {
   const searchParams = useSearchParams();
@@ -48,10 +48,10 @@ function MainContent() {
       try {
         setLoading(true);
         const [kpiRes, stateRes, mpRes, anomalyRes] = await Promise.all([
-          fetch(`${API_BASE}/api/analytics/overview`),
-          fetch(`${API_BASE}/api/analytics/states`),
-          fetch(`${API_BASE}/api/analytics/mps?limit=600`),
-          fetch(`${API_BASE}/api/risk/anomalies`)
+          apiFetch('/api/analytics/overview'),
+          apiFetch('/api/analytics/states'),
+          apiFetch('/api/analytics/mps?limit=600'),
+          apiFetch('/api/risk/anomalies')
         ]);
 
         if (!kpiRes.ok || !stateRes.ok || !mpRes.ok || !anomalyRes.ok) {
@@ -103,7 +103,7 @@ function MainContent() {
         <main className="flex-1 p-8 overflow-y-auto max-h-[calc(100vh-65px)] space-y-8">
           {error && (
             <div className="bg-[#FF6B6B] text-white border-4 border-black p-4 font-mono font-bold text-xs shadow-[4px_4px_0px_0px_#000] flex items-center justify-between">
-              <span>⚠️ BACKEND NOTICE: {error}. ENSURE FASTAPI IS RUNNING ON `http://localhost:8001`.</span>
+              <span>⚠️ BACKEND NOTICE: {error}.</span>
               <button
                 onClick={() => window.location.reload()}
                 className="bg-black hover:bg-white hover:text-black text-white px-3 py-1 border border-black font-black uppercase"
