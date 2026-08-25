@@ -104,8 +104,9 @@ def calculate_weather_risk(weather_data: Dict[str, Any], forecast_data: Dict[str
         "category_scores": {
             "flood": round(flood_score, 1),
             "heatwave": round(heat_score, 1),
-            "wind_storm": round(wind_score, 1)
+            "wind_storm": round(wind_storm, 1)
         },
         "transparent_factors": factors,
-        "active_alerts": official_alerts
+        "active_alerts": official_alerts,
+        "data_source_mode": "Deterministic Seasonal Risk Matrix (Live IMD RSS Feed Offline - Seasonal Baseline Applied)"
     }

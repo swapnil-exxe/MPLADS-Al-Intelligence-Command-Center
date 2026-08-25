@@ -184,31 +184,36 @@ class MPLADSDatabase:
                     CREATE TABLE IF NOT EXISTS users_and_roles (
                         user_id SERIAL PRIMARY KEY,
                         username VARCHAR(100) NOT NULL UNIQUE,
+                        password_hash VARCHAR(255),
                         role VARCHAR(50) NOT NULL,
                         department VARCHAR(255) NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 """)
+                cursor.execute("ALTER TABLE users_and_roles ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);")
 
                 # Create Indexes for query performance
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_mp_allocations_state ON mp_allocations(state);")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_anomaly_signals_run_id ON anomaly_signals(run_id);")
                 cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_mp_id ON investigation_audit_logs(mp_id);")
 
-                # Seed default RBAC users if table empty
-                cursor.execute("SELECT COUNT(*) FROM users_and_roles;")
+                # Seed default RBAC users if table empty or missing password hashes
+                from app.core.auth import hash_password
+                cursor.execute("SELECT COUNT(*) FROM users_and_roles WHERE password_hash IS NOT NULL;")
                 count = cursor.fetchone()[0]
                 if count == 0:
+                    cursor.execute("TRUNCATE TABLE users_and_roles RESTART IDENTITY;")
+                    default_users = [
+                        ("admin_mospi", hash_password("AdminPassword@2026"), "ADMIN", "Data Informatics & Innovation Division"),
+                        ("nodal_officer_tg", hash_password("NodalOfficer@2026"), "NODAL_OFFICER", "Telangana District Secretariat"),
+                        ("nodal_officer_mh", hash_password("NodalOfficer@2026"), "NODAL_OFFICER", "Maharashtra District Secretariat"),
+                        ("auditor_cag", hash_password("AuditorPassword@2026"), "ANALYST", "Comptroller & Auditor General Audit Wing"),
+                        ("public_researcher", hash_password("ViewerPassword@2026"), "VIEWER", "Public Policy Research Cell")
+                    ]
                     cursor.executemany("""
-                        INSERT INTO users_and_roles (username, role, department)
-                        VALUES (%s, %s, %s);
-                    """, [
-                        ("admin_mospi", "ADMIN", "Data Informatics & Innovation Division"),
-                        ("nodal_officer_tg", "NODAL_OFFICER", "Telangana District Secretariat"),
-                        ("nodal_officer_mh", "NODAL_OFFICER", "Maharashtra District Secretariat"),
-                        ("auditor_cag", "ANALYST", "Comptroller & Auditor General Audit Wing"),
-                        ("public_researcher", "VIEWER", "Public Policy Research Cell")
-                    ])
+                        INSERT INTO users_and_roles (username, password_hash, role, department)
+                        VALUES (%s, %s, %s, %s);
+                    """, default_users)
             conn.commit()
 
         # Idempotent CSV sync
@@ -421,5 +426,12 @@ class MPLADSDatabase:
                 else:
                     cursor.execute("SELECT * FROM investigation_audit_logs ORDER BY created_at DESC LIMIT 100;")
                 return [dict(row) for row in cursor.fetchall()]
+
+    def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
+        with self.get_connection() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                cursor.execute("SELECT * FROM users_and_roles WHERE LOWER(username) = LOWER(%s);", (username,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
 
 db_service = MPLADSDatabase()

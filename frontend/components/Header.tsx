@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Database, Cpu, X, Clock, Trash2, MapPin, User } from 'lucide-react';
+import { Search, Database, Cpu, X, Clock, Trash2, MapPin, User, Shield, LogIn, LogOut, Download, FileText } from 'lucide-react';
 import { API_BASE } from '../lib/api';
+import LoginModal from './LoginModal';
 
 interface HeaderProps {
   activeTab: string;
@@ -34,7 +35,6 @@ function SearchBarInput({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [allMPs, setAllMPs] = useState<any[]>([]);
 
-  // Load Recent Searches from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('mplads_recent_searches');
@@ -44,7 +44,6 @@ function SearchBarInput({
     } catch {}
   }, []);
 
-  // Fetch MP directory for autocomplete suggestions
   useEffect(() => {
     fetch(`${API_BASE}/api/risk/anomalies`)
       .then(res => res.json())
@@ -56,14 +55,12 @@ function SearchBarInput({
       .catch(() => {});
   }, []);
 
-  // Sync external searchQuery prop
   useEffect(() => {
     if (searchQuery !== undefined) {
       setInternalQuery(searchQuery);
     }
   }, [searchQuery]);
 
-  // Click outside listener
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -92,8 +89,6 @@ function SearchBarInput({
     } catch {}
   };
 
-  // Trigger search on ENTER key or suggestion click:
-  // Shows search results by switching to 'anomalies' tab if needed!
   const triggerSearch = (queryText: string) => {
     setInternalQuery(queryText);
     saveRecentSearch(queryText);
@@ -118,7 +113,6 @@ function SearchBarInput({
 
     if (setSearchQuery) {
       setSearchQuery(q);
-      // Live filter if already on directory tab
     }
   };
 
@@ -133,7 +127,6 @@ function SearchBarInput({
     if (setSearchQuery) setSearchQuery("");
   };
 
-  // Filter MP Autocomplete suggestions based on query
   const suggestions = internalQuery.trim()
     ? allMPs.filter(mp =>
         mp.mp_name.toLowerCase().includes(internalQuery.toLowerCase()) ||
@@ -165,10 +158,8 @@ function SearchBarInput({
         )}
       </div>
 
-      {/* Popover Suggestions & Recent Searches Dropdown */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border-4 border-black shadow-[4px_4px_0px_0px_#000] z-50 max-h-72 overflow-y-auto font-mono text-xs">
-          {/* Section 1: Live Autocomplete Suggestions */}
           {suggestions.length > 0 && (
             <div>
               <div className="bg-[#FFD93D] px-3 py-1 font-black text-[10px] uppercase border-b-2 border-black text-black">
@@ -202,7 +193,6 @@ function SearchBarInput({
             </div>
           )}
 
-          {/* Section 2: Recent Searches */}
           {internalQuery.trim() === "" && recentSearches.length > 0 && (
             <div>
               <div className="bg-[#C4B5FD] px-3 py-1 font-black text-[10px] uppercase border-b-2 border-black flex justify-between items-center text-black">
@@ -232,7 +222,6 @@ function SearchBarInput({
             </div>
           )}
 
-          {/* Section 3: Empty State */}
           {internalQuery.trim() !== "" && suggestions.length === 0 && (
             <div className="p-3 text-center text-black/70 font-bold text-xs bg-[#FFFDF5]">
               NO MATCHES FOR "{internalQuery.toUpperCase()}"
@@ -254,6 +243,23 @@ export default function Header({
   onOpenModelHealth
 }: HeaderProps) {
   const router = useRouter();
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("mplads_user");
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      }
+    } catch {}
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("mplads_auth_token");
+    localStorage.removeItem("mplads_user");
+    setCurrentUser(null);
+  };
 
   const handleBrandClick = () => {
     if (setActiveTab) setActiveTab('overview');
@@ -277,69 +283,113 @@ export default function Header({
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FFFDF5] border-b-4 border-black px-6 py-3 flex items-center justify-between font-['Space_Grotesk',sans-serif]">
-      {/* Brand & Authority */}
-      <div className="flex items-center space-x-4">
-        <div 
-          onClick={handleBrandClick}
-          className="flex items-center space-x-3 cursor-pointer group"
-        >
-          <div className="w-9 h-9 bg-[#FF6B6B] border-2 border-black flex items-center justify-center font-black text-black text-lg shadow-[3px_3px_0px_0px_#000]">
-            M
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-black text-base uppercase text-black tracking-tight">MPLADS INTELLIGENCE</span>
-              <span className="text-[11px] font-bold text-black bg-[#FFD93D] px-2 py-0.5 border-2 border-black uppercase font-mono">
-                MoSPI · DIID
-              </span>
+    <>
+      <header className="sticky top-0 z-40 bg-[#FFFDF5] border-b-4 border-black px-6 py-3 flex items-center justify-between font-['Space_Grotesk',sans-serif]">
+        {/* Brand & Authority */}
+        <div className="flex items-center space-x-4">
+          <div 
+            onClick={handleBrandClick}
+            className="flex items-center space-x-3 cursor-pointer group"
+          >
+            <div className="w-9 h-9 bg-[#FF6B6B] border-2 border-black flex items-center justify-center font-black text-black text-lg shadow-[3px_3px_0px_0px_#000]">
+              M
             </div>
-            <p className="text-[11px] font-bold text-black uppercase tracking-wider hidden sm:block">
-              Official Dataset · 543 MPs · 36 States / UTs
-            </p>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-black text-base uppercase text-black tracking-tight">MPLADS INTELLIGENCE</span>
+                <span className="text-[11px] font-bold text-black bg-[#FFD93D] px-2 py-0.5 border-2 border-black uppercase font-mono">
+                  MoSPI · DIID
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-black uppercase tracking-wider hidden sm:block">
+                Official Dataset · 543 MPs · 36 States / UTs
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Center Search & Status */}
-      <div className="hidden md:flex items-center space-x-3 font-mono">
-        <Suspense fallback={
-          <div className="w-72 bg-white border-2 border-black px-3 py-1.5 text-xs font-mono font-bold">
-            SEARCHING...
+        {/* Center Search & Status */}
+        <div className="hidden md:flex items-center space-x-3 font-mono">
+          <Suspense fallback={
+            <div className="w-72 bg-white border-2 border-black px-3 py-1.5 text-xs font-mono font-bold">
+              SEARCHING...
+            </div>
+          }>
+            <SearchBarInput
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+            />
+          </Suspense>
+
+          <div className="flex items-center space-x-2 text-xs font-black text-black bg-[#FFD93D] border-2 border-black px-3 py-1.5 shadow-[3px_3px_0px_0px_#000] uppercase">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-black animate-pulse"></span>
+            <span>SYSTEM MONITORING</span>
           </div>
-        }>
-          <SearchBarInput
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-          />
-        </Suspense>
-
-        <div className="flex items-center space-x-2 text-xs font-black text-black bg-[#FFD93D] border-2 border-black px-3 py-1.5 shadow-[3px_3px_0px_0px_#000] uppercase">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-black animate-pulse"></span>
-          <span>SYSTEM MONITORING</span>
         </div>
-      </div>
 
-      {/* Right Tools */}
-      <div className="flex items-center space-x-2 font-mono text-xs">
-        <button
-          onClick={handleDataSourcesClick}
-          className="flex items-center space-x-1.5 bg-white hover:bg-[#C4B5FD] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
-        >
-          <Database className="w-4 h-4 stroke-[3px]" />
-          <span className="hidden sm:inline">DATA SOURCES</span>
-        </button>
+        {/* Right Tools & Auth */}
+        <div className="flex items-center space-x-2 font-mono text-xs">
+          {/* Export PDF Download Quick Button */}
+          <a
+            href={`${API_BASE}/api/exports/pdf`}
+            download
+            className="flex items-center space-x-1.5 bg-[#FFD93D] hover:bg-black hover:text-white text-black font-bold px-2.5 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+            title="Download Official Executive Summary PDF Report"
+          >
+            <Download className="w-3.5 h-3.5 stroke-[3px]" />
+            <span className="hidden lg:inline text-[11px]">PDF REPORT</span>
+          </a>
 
-        <button
-          onClick={handleModelHealthClick}
-          className="flex items-center space-x-1.5 bg-white hover:bg-[#FFD93D] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
-        >
-          <Cpu className="w-4 h-4 stroke-[3px]" />
-          <span className="hidden sm:inline">MODEL HEALTH</span>
-        </button>
-      </div>
-    </header>
+          <button
+            onClick={handleDataSourcesClick}
+            className="flex items-center space-x-1.5 bg-white hover:bg-[#C4B5FD] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+          >
+            <Database className="w-4 h-4 stroke-[3px]" />
+            <span className="hidden sm:inline">DATA SOURCES</span>
+          </button>
+
+          <button
+            onClick={handleModelHealthClick}
+            className="flex items-center space-x-1.5 bg-white hover:bg-[#FFD93D] text-black font-bold px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+          >
+            <Cpu className="w-4 h-4 stroke-[3px]" />
+            <span className="hidden sm:inline">MODEL HEALTH</span>
+          </button>
+
+          {/* Authentication Badge & Action */}
+          {currentUser ? (
+            <div className="flex items-center space-x-1.5 bg-[#C4B5FD] border-2 border-black px-2.5 py-1.5 shadow-[3px_3px_0px_0px_#000]">
+              <Shield className="w-3.5 h-3.5 text-black stroke-[3px]" />
+              <span className="font-black text-[11px] uppercase truncate max-w-[90px]">{currentUser.username}</span>
+              <button
+                onClick={handleLogout}
+                className="text-black hover:text-red-600 font-black p-0.5 border border-black bg-white hover:bg-black text-[9px] uppercase ml-1"
+                title="Log out session"
+              >
+                <LogOut className="w-3 h-3 stroke-[3px]" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowLoginModal(true)}
+              className="flex items-center space-x-1 bg-[#FF6B6B] text-white hover:bg-black font-black px-3 py-1.5 border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all uppercase"
+            >
+              <LogIn className="w-4 h-4 stroke-[3px]" />
+              <span>OFFICER LOGIN</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <LoginModal
+          onClose={() => setShowLoginModal(false)}
+          onLoginSuccess={(userData) => setCurrentUser(userData)}
+        />
+      )}
+    </>
   );
 }

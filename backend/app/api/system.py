@@ -1,42 +1,59 @@
-from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, Request, Depends
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 from app.db.database import db_service
+from app.core.auth import get_current_user, require_role
+from app.core.rate_limiter import limiter
 
 router = APIRouter(prefix="/api/system", tags=["System Transparency & DB"])
 
 class AuditLogRequest(BaseModel):
-    mp_id: int
-    mp_name: str
-    status: str
-    note: Optional[str] = None
-    nodal_officer: Optional[str] = None
+    mp_id: int = Field(..., ge=1, le=1000)
+    mp_name: str = Field(..., min_length=2, max_length=255)
+    status: str = Field(..., min_length=2, max_length=100)
+    note: Optional[str] = Field(None, max_length=2000)
+    nodal_officer: Optional[str] = Field(None, max_length=255)
 
 @router.get("/db-status")
-def get_db_status():
+def get_db_status(request: Request):
     """Returns PostgreSQL database connectivity, record counts, and schema status."""
+    limiter.check_rate_limit(request, endpoint_type="get_db_status", max_requests=120, window_seconds=60)
     return db_service.get_summary_stats()
 
 @router.get("/audit-logs")
-def get_audit_logs(mp_id: Optional[int] = None):
+def get_audit_logs(request: Request, mp_id: Optional[int] = None):
     """Returns persistent audit trail logs stored in PostgreSQL database."""
+    limiter.check_rate_limit(request, endpoint_type="get_audit_logs", max_requests=120, window_seconds=60)
     return {"logs": db_service.get_audit_logs(mp_id=mp_id)}
 
 @router.post("/audit-logs")
-def create_audit_log(payload: AuditLogRequest):
+def create_audit_log(
+    payload: AuditLogRequest,
+    request: Request,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user)
+):
     """Persists a new investigation audit log entry into PostgreSQL database."""
+    limiter.check_rate_limit(request, endpoint_type="create_audit_log", max_requests=30, window_seconds=60)
+    
+    officer_name = payload.nodal_officer
+    if not officer_name and current_user:
+        officer_name = current_user.get("sub")
+    if not officer_name:
+        officer_name = "Nodal Officer Audit"
+
     db_service.add_audit_log(
         mp_id=payload.mp_id,
         mp_name=payload.mp_name,
         status=payload.status,
         note=payload.note,
-        officer=payload.nodal_officer
+        officer=officer_name
     )
     return {"status": "SUCCESS", "message": "Audit log entry persisted into PostgreSQL database."}
 
 @router.get("/data-sources")
-def get_data_sources_ledger():
+def get_data_sources_ledger(request: Request):
     """Returns data source transparency ledger distinguishing official source data vs model-derived analysis."""
+    limiter.check_rate_limit(request, endpoint_type="get_data_sources", max_requests=120, window_seconds=60)
     db_stats = db_service.get_summary_stats()
     return {
         "sources": [
@@ -79,8 +96,9 @@ def get_data_sources_ledger():
     }
 
 @router.get("/model-health")
-def get_model_health():
+def get_model_health(request: Request):
     """Returns Machine Learning model health, parameters, and training metrics."""
+    limiter.check_rate_limit(request, endpoint_type="get_model_health", max_requests=120, window_seconds=60)
     return {
         "models": [
             {

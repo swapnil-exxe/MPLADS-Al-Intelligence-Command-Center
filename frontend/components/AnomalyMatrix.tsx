@@ -79,6 +79,23 @@ export default function AnomalyMatrix({ mps, onSelectMP, searchQuery = "", setSe
             ))}
           </select>
 
+          {/* Export Action Buttons */}
+          <a
+            href={`http://localhost:8001/api/exports/csv${filterState !== 'ALL' ? `?state=${filterState}` : ''}`}
+            download
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-emerald-500 transition-colors flex items-center gap-1"
+          >
+            EXPORT CSV
+          </a>
+
+          <a
+            href={`http://localhost:8001/api/exports/excel${filterState !== 'ALL' ? `?state=${filterState}` : ''}`}
+            download
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-indigo-500 transition-colors flex items-center gap-1"
+          >
+            EXPORT EXCEL
+          </a>
+
           {/* Outlier Checkbox */}
           <label className="flex items-center space-x-1.5 text-xs text-gray-300 font-mono bg-gray-900 border border-gray-700 px-2.5 py-1.5 rounded-lg cursor-pointer">
             <input

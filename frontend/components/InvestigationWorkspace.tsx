@@ -37,11 +37,17 @@ export default function InvestigationWorkspace({ mp, onClose }: InvestigationWor
   if (!mp) return null;
 
   const persistAuditLog = (newStatus: string, noteText: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem("mplads_auth_token") : null;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     fetch(`${API_BASE}/api/system/audit-logs`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
-        mp_id: parseInt(mp.mp_id.replace('MP_', ''), 10) || 1,
+        mp_id: parseInt(String(mp.sr_no || mp.mp_id).replace('MP_', ''), 10) || 1,
         mp_name: mp.mp_name,
         status: newStatus,
         note: noteText,
@@ -55,7 +61,7 @@ export default function InvestigationWorkspace({ mp, onClose }: InvestigationWor
     setNotesList([note, ...notesList]);
     persistAuditLog(status, note);
     setNote("");
-    toast.success("Audit note recorded in SQLite DB", {
+    toast.success("Audit note recorded in PostgreSQL DB", {
       description: `Note added to ${mp.mp_name} persistent audit log.`
     });
   };
@@ -64,7 +70,7 @@ export default function InvestigationWorkspace({ mp, onClose }: InvestigationWor
     setStatus(newStatus);
     persistAuditLog(newStatus, `Status updated to ${newStatus}`);
     toast.info(`Investigation status updated: ${newStatus}`, {
-      description: `Record #${mp.mp_id} status persisted to SQLite DB.`
+      description: `Record #${mp.mp_id} status persisted to PostgreSQL DB.`
     });
   };
 
@@ -103,12 +109,23 @@ export default function InvestigationWorkspace({ mp, onClose }: InvestigationWor
               </p>
             </div>
 
-            <button
-              onClick={onClose}
-              className="p-2.5 bg-white hover:bg-[#FF6B6B] text-black hover:text-white border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-            >
-              <X className="w-5 h-5 stroke-[3px]" />
-            </button>
+            <div className="flex items-center space-x-2">
+              <a
+                href={`${API_BASE}/api/exports/audit-case-pdf/${mp.sr_no || mp.mp_id}`}
+                download
+                className="p-2 bg-white hover:bg-black text-black hover:text-white border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-xs font-black uppercase flex items-center gap-1"
+                title="Download Nodal Officer Investigation Audit Brief PDF"
+              >
+                <span>PDF BRIEF</span>
+              </a>
+
+              <button
+                onClick={onClose}
+                className="p-2 bg-white hover:bg-[#FF6B6B] text-black hover:text-white border-2 border-black shadow-[3px_3px_0px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+              >
+                <X className="w-5 h-5 stroke-[3px]" />
+              </button>
+            </div>
           </div>
 
           {/* Content Area */}
