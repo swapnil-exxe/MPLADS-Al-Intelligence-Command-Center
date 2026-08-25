@@ -105,26 +105,8 @@ export default function AIInvestigatorChat() {
             {m.sender === 'user' ? (
               <p className="uppercase">{m.text}</p>
             ) : (
-              <div className="space-y-3">
-                <div className="prose prose-xs max-w-none text-black font-sans font-bold leading-relaxed whitespace-pre-wrap">
-                  {m.answer}
-                </div>
-
-                {/* Evidence Box */}
-                {m.evidence && m.evidence.length > 0 && (
-                  <div className="bg-[#FFFDF5] p-3 border-2 border-black space-y-1 font-mono text-xs font-bold text-black shadow-[3px_3px_0px_0px_#000]">
-                    <span className="font-black uppercase block">EVIDENCE GROUNDING:</span>
-                    {m.evidence.map((e: string, i: number) => (
-                      <div key={i}>• {e}</div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Source & Limitation */}
-                <div className="pt-2 border-t-2 border-black flex flex-col sm:flex-row sm:items-center justify-between text-xs font-mono font-bold text-black gap-2">
-                  <span>SOURCE: <strong className="bg-[#FFD93D] px-1 border border-black">{m.source}</strong></span>
-                  <span className="bg-[#FF6B6B] text-white px-1 border border-black">{m.limitation}</span>
-                </div>
+              <div className="prose prose-xs max-w-none text-black font-sans font-bold leading-relaxed whitespace-pre-wrap">
+                {m.answer}
               </div>
             )}
           </motion.div>
