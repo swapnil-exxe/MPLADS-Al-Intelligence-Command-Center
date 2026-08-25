@@ -128,21 +128,24 @@ export default function LoginModal({ onClose, onLoginSuccess }: LoginModalProps)
 
         {/* Quick Credentials Helper for Verification */}
         <div className="bg-[#FFFDF5] border-2 border-black p-3 space-y-2 font-mono text-[11px]">
-          <div className="font-black text-black uppercase text-[10px] border-b border-black/30 pb-1">
-            VERIFIED TEST ACCOUNTS (SELECT TO PRE-FILL)
+          <div className="font-black text-black uppercase text-[10px] border-b border-black/30 pb-1 flex items-center justify-between">
+            <span>DEVELOPMENT/TEST ONLY ACCOUNTS</span>
+            <span className="bg-black text-white px-1 font-mono text-[9px]">NOT PRODUCTION</span>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
+              type="button"
               onClick={() => handleFillDemo("nodal_officer_tg", "NodalOfficer@2026")}
               className="bg-[#C4B5FD] hover:bg-black hover:text-white text-black font-bold px-2 py-1 border border-black text-[10px] uppercase"
             >
-              NODAL OFFICER (TELANGANA)
+              TEST NODAL OFFICER (TELANGANA)
             </button>
             <button
+              type="button"
               onClick={() => handleFillDemo("admin_mospi", "AdminPassword@2026")}
               className="bg-[#FFD93D] hover:bg-black hover:text-white text-black font-bold px-2 py-1 border border-black text-[10px] uppercase"
             >
-              ADMIN (MoSPI DIID)
+              TEST ADMIN (MoSPI DIID)
             </button>
           </div>
         </div>
