@@ -9,6 +9,13 @@ from main import app
 
 client = TestClient(app)
 
+def test_ai_greeting_query():
+    for g in ["hii", "hello", "hi", "hey"]:
+        res = ai_investigator.answer_query(g)
+        assert res['is_grounded'] is True
+        assert res['query_type'] == 'greeting_response'
+        assert "MoSPI MPLADS AI Intelligence Assistant" in res['answer']
+
 def test_ai_highest_allocation():
     res = ai_investigator.answer_query("Which MP has the highest allocation?")
     assert res['is_grounded'] is True

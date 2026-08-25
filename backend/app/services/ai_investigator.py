@@ -94,9 +94,32 @@ class AIInvestigator:
                 "notice": "Input Validation Error"
             }
 
+        # Clean & sanitize input
         raw_prompt = user_prompt.strip()[:1000]
         clean_prompt = html.escape(raw_prompt)
         prompt_lower = clean_prompt.lower()
+
+        # 0. GREETING HANDLER (hi, hello, hii, hey, greetings, who are you)
+        greetings = ["hi", "hii", "hello", "hey", "greetings", "good morning", "good afternoon", "who are you"]
+        if prompt_lower in greetings or prompt_lower.startswith("hi ") or prompt_lower.startswith("hello ") or prompt_lower == "hi!":
+            return {
+                "answer": (
+                    "**Hello! I am the MoSPI MPLADS AI Intelligence Assistant (SIH26102)**.\n\n"
+                    "I am connected to the official MoSPI Gazette dataset (**543 MPs, ₹8,306.21 Crore Total Allocation**) and Scikit-Learn anomaly detectors.\n\n"
+                    "**How I can assist you**:\n"
+                    "• **MP & Constituency Risk Audits**: Ask *'Why is Malkajgiri showing an anomaly?'* or *'What is the allocation of Eatala Rajender?'*\n"
+                    "• **Allocation Records**: Ask *'Which MP has the highest / lowest allocation?'*\n"
+                    "• **State Analytics**: Ask *'Compare Maharashtra and Gujarat allocation averages'* or *'Which state has highest allocation?'*\n"
+                    "• **Data Integrity Audits**: Ask *'Which MPs have missing allocation data?'* or *'What is the baseline limit?'*\n\n"
+                    "What would you like to investigate today?"
+                ),
+                "is_grounded": True,
+                "query_type": "greeting_response",
+                "tools_executed": ["AIInvestigator.greeting_handler"],
+                "evidence_used": ["Official MoSPI CSV Dataset (Allocated Limit for Honble MPs.csv)"],
+                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
+                "notice": "Grounded AI Assistant Greeting"
+            }
 
         # 1. EXPLICIT BOUNDARY CHECK: Out-of-Scope Questions (Contractors, Tenders, Vendor Payments, GPS)
         unsupported_keywords = [
