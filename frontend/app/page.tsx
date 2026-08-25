@@ -47,27 +47,44 @@ function MainContent() {
     async function loadData() {
       try {
         setLoading(true);
-        const [kpiRes, stateRes, mpRes, anomalyRes] = await Promise.all([
+        const results = await Promise.allSettled([
           apiFetch('/api/analytics/overview'),
           apiFetch('/api/analytics/states'),
           apiFetch('/api/analytics/mps?limit=600'),
           apiFetch('/api/risk/anomalies')
         ]);
 
-        if (!kpiRes.ok || !stateRes.ok || !mpRes.ok || !anomalyRes.ok) {
-          throw new Error("Failed to fetch data from backend FastAPI endpoints");
+        let successCount = 0;
+
+        if (results[0].status === 'fulfilled' && results[0].value.ok) {
+          const kpiData = await results[0].value.json();
+          setKpis(kpiData);
+          successCount++;
         }
 
-        const kpiData = await kpiRes.json();
-        const stateData = await stateRes.json();
-        const mpData = await mpRes.json();
-        const anomalyData = await anomalyRes.json();
+        if (results[1].status === 'fulfilled' && results[1].value.ok) {
+          const stateData = await results[1].value.json();
+          setStateAnalytics(stateData);
+          successCount++;
+        }
 
-        setKpis(kpiData);
-        setStateAnalytics(stateData);
-        setMps(mpData.mps || []);
-        setAnomalies(anomalyData.anomalies || []);
-        setError(null);
+        if (results[2].status === 'fulfilled' && results[2].value.ok) {
+          const mpData = await results[2].value.json();
+          setMps(mpData.mps || []);
+          successCount++;
+        }
+
+        if (results[3].status === 'fulfilled' && results[3].value.ok) {
+          const anomalyData = await results[3].value.json();
+          setAnomalies(anomalyData.anomalies || []);
+          successCount++;
+        }
+
+        if (successCount === 0) {
+          setError("Failed to connect to backend server");
+        } else {
+          setError(null);
+        }
       } catch (err: any) {
         setError(err.message || "Failed to connect to backend server");
       } finally {
