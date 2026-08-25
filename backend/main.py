@@ -1,6 +1,14 @@
 import os
 import datetime
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from backend/.env
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(env_path):
+    load_dotenv(env_path)
+else:
+    load_dotenv()
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware

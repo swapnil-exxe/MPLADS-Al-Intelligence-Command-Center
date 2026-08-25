@@ -3,6 +3,10 @@ import html
 import re
 import json
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from typing import Dict, Any, List, Optional
 from app.services.real_data_service import real_data_service
 from ml.anomaly_detector import anomaly_detector
@@ -294,7 +298,55 @@ class AIInvestigator:
                 "notice": "Verified Official Entitlement Metric"
             }
 
-        # 6. STATE COMPARISON OR STATE QUERY
+        # 6. SPECIFIC MP OR CONSTITUENCY OR ANOMALY EXPLANATION QUERY
+        target_mp = None
+        for a in anomalies:
+            mp_name = str(a.get('mp_name', '')).lower()
+            constituency = str(a.get('constituency', '')).lower()
+            if (mp_name and mp_name in prompt_lower) or (constituency and constituency in prompt_lower):
+                target_mp = a
+                break
+
+        if target_mp:
+            alloc_cr = target_mp.get('allocated_amount_crores')
+            alloc_str = f"₹{alloc_cr:.2f} Crore" if alloc_cr is not None else "Missing / Unlisted"
+            dev_pct = target_mp.get('dev_baseline_pct', 0.0)
+
+            evidence_items = target_mp.get('evidence_breakdown', [])
+            evidence_bullets = "\n".join([f"  - **{e.get('label', 'Signal')}**: {e.get('description', '')}" for e in evidence_items])
+
+            ans = (
+                f"**Statistical Anomaly & Allocation Evaluation for {target_mp['mp_name']} ({target_mp['constituency'].title()})**:\n\n"
+                f"• **Constituency**: **{target_mp['constituency'].title()}** ({target_mp.get('category', 'General')}) · **{target_mp['state']}**\n"
+                f"• **Allocated Limit**: **{alloc_str}**\n"
+                f"• **Baseline Deviation**: **{dev_pct:+.2f}%** relative to standard ₹14.70 Cr baseline\n"
+                f"• **State Divergence**: {target_mp.get('dev_state_pct', 0.0):+.2f}% relative to {target_mp['state']} average\n"
+                f"• **Percentile Rank**: {target_mp.get('percentile', 50.0):.1f}th percentile nationally\n"
+                f"• **Risk Classification**: **{target_mp['risk_level']}** (Score: **{target_mp['risk_score']} / 100**)\n"
+                f"• **Multi-Method Consensus**: **{target_mp.get('multi_method_agreement', '2 / 3 Methods')}**\n\n"
+                f"**Model Evidence Breakdown**:\n"
+                f"{evidence_bullets}\n\n"
+                f"*Audit Notice: This record exhibits statistical divergence requiring Nodal Officer review priority, not proof of fraud.*"
+            )
+
+            return {
+                "answer": ans,
+                "is_grounded": True,
+                "query_type": "mp_anomaly_explanation",
+                "tools_executed": ["anomaly_detector.fit_and_predict", "real_data_service.get_mp_by_name"],
+                "evidence_used": [
+                    f"Allocation: {alloc_str}",
+                    f"Baseline Deviation: {dev_pct:+.2f}%",
+                    f"Z-Score: {target_mp.get('z_score', 'N/A')}",
+                    f"IQR Ratio: {target_mp.get('iqr_ratio', 'N/A')}",
+                    f"Isolation Forest Score: {target_mp.get('ml_anomaly_score', 'N/A')}",
+                    f"Risk Level: {target_mp['risk_level']} (Score {target_mp['risk_score']}/100)"
+                ],
+                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
+                "notice": "Grounded strictly in verified MoSPI allocation limits."
+            }
+
+        # 7. STATE COMPARISON OR STATE QUERY
         if "compare" in prompt_lower or any(word in prompt_lower for word in ["state allocation", "maharashtra", "gujarat", "telangana", "uttar pradesh"]):
             mentioned_states = [s['state'] for s in states_analytics if s['state'].lower() in prompt_lower]
             if len(mentioned_states) >= 2:
@@ -345,54 +397,6 @@ class AIInvestigator:
                 "evidence_used": [f"{s['state']}: ₹{s['total_allocation_crores']} Cr" for s in states_analytics[:3]],
                 "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
                 "notice": "Aggregated State Entitlement Metrics"
-            }
-
-        # 7. SPECIFIC MP OR CONSTITUENCY OR ANOMALY EXPLANATION QUERY
-        target_mp = None
-        for a in anomalies:
-            mp_name = str(a.get('mp_name', '')).lower()
-            constituency = str(a.get('constituency', '')).lower()
-            if (mp_name and mp_name in prompt_lower) or (constituency and constituency in prompt_lower):
-                target_mp = a
-                break
-
-        if target_mp:
-            alloc_cr = target_mp.get('allocated_amount_crores')
-            alloc_str = f"₹{alloc_cr:.2f} Crore" if alloc_cr is not None else "Missing / Unlisted"
-            dev_pct = target_mp.get('dev_baseline_pct', 0.0)
-
-            evidence_items = target_mp.get('evidence_breakdown', [])
-            evidence_bullets = "\n".join([f"  - **{e.get('label', 'Signal')}**: {e.get('description', '')}" for e in evidence_items])
-
-            ans = (
-                f"**Statistical Anomaly & Allocation Evaluation for {target_mp['mp_name']} ({target_mp['constituency'].title()})**:\n\n"
-                f"• **Constituency**: **{target_mp['constituency'].title()}** ({target_mp.get('category', 'General')}) · **{target_mp['state']}**\n"
-                f"• **Allocated Limit**: **{alloc_str}**\n"
-                f"• **Baseline Deviation**: **{dev_pct:+.2f}%** relative to standard ₹14.70 Cr baseline\n"
-                f"• **State Divergence**: {target_mp.get('dev_state_pct', 0.0):+.2f}% relative to {target_mp['state']} average\n"
-                f"• **Percentile Rank**: {target_mp.get('percentile', 50.0):.1f}th percentile nationally\n"
-                f"• **Risk Classification**: **{target_mp['risk_level']}** (Score: **{target_mp['risk_score']} / 100**)\n"
-                f"• **Multi-Method Consensus**: **{target_mp.get('multi_method_agreement', '2 / 3 Methods')}**\n\n"
-                f"**Model Evidence Breakdown**:\n"
-                f"{evidence_bullets}\n\n"
-                f"*Audit Notice: This record exhibits statistical divergence requiring Nodal Officer review priority, not proof of fraud.*"
-            )
-
-            return {
-                "answer": ans,
-                "is_grounded": True,
-                "query_type": "mp_anomaly_explanation",
-                "tools_executed": ["anomaly_detector.fit_and_predict", "real_data_service.get_mp_by_name"],
-                "evidence_used": [
-                    f"Allocation: {alloc_str}",
-                    f"Baseline Deviation: {dev_pct:+.2f}%",
-                    f"Z-Score: {target_mp.get('z_score', 'N/A')}",
-                    f"IQR Ratio: {target_mp.get('iqr_ratio', 'N/A')}",
-                    f"Isolation Forest Score: {target_mp.get('ml_anomaly_score', 'N/A')}",
-                    f"Risk Level: {target_mp['risk_level']} (Score {target_mp['risk_score']}/100)"
-                ],
-                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
-                "notice": "Grounded strictly in verified MoSPI allocation limits."
             }
 
         # 8. HIGH RISK / ANOMALY SUMMARY QUERY
