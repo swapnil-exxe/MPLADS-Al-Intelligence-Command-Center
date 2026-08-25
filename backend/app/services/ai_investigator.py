@@ -33,7 +33,7 @@ class AIInvestigator:
             "5. Cite the official source: Allocated Limit for Honble MPs.csv."
         )
 
-        models_to_try = ["llama-3.3-70b-versatile", "openai/gpt-oss-20b", "llama3-70b-8192", "llama3-8b-8192"]
+        models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]
 
         # 1. Try OpenAI SDK Client with Groq Base URL
         try:
