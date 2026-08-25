@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -19,6 +19,16 @@ export default function AIInvestigatorChat() {
       limitation: "DATASET CONTAINS ALLOCATION LIMITS PER MP. WORK-LEVEL EXPENDITURE REQUIRES ADDITIONAL DATASET INGESTION."
     }
   ]);
+
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
 
   const suggestedQuestions = [
     "Why is Malkajgiri showing an allocation anomaly?",
@@ -89,7 +99,7 @@ export default function AIInvestigatorChat() {
         ))}
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat Messages Container */}
       <div className="space-y-4 min-h-[350px] max-h-[500px] overflow-y-auto pr-1">
         {messages.map((m, idx) => (
           <motion.div
@@ -117,6 +127,9 @@ export default function AIInvestigatorChat() {
             ANALYZING MoSPI DATASET RECORDS...
           </div>
         )}
+
+        {/* Dummy div anchor for auto-scrolling to newest message */}
+        <div ref={chatEndRef} />
       </div>
 
       {/* Query Input */}
