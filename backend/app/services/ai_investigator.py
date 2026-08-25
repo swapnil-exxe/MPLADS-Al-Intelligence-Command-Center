@@ -13,8 +13,8 @@ from ml.anomaly_detector import anomaly_detector
 
 class AIInvestigator:
     """
-    Grounded AI Investigator Engine supporting Groq Llama-3 API (https://api.groq.com/openai/v1)
-    with zero-dependency fallback to Local Deterministic Engine.
+    All-Powerful Grounded AI Investigator Engine supporting Groq Llama-3.3 70B API (https://api.groq.com/openai/v1)
+    with full read-only access to all MoSPI dataset metrics, state analytics, and ML anomaly models.
     """
 
     def __init__(self):
@@ -24,13 +24,14 @@ class AIInvestigator:
         """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1 using OpenAI SDK client."""
         system_instruction = (
             "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant.\n"
-            "Your answers MUST be strictly grounded in the official MoSPI dataset metrics provided below.\n"
-            "RULES:\n"
-            "1. Answer clearly, professionally, and concisely using the provided context.\n"
-            "2. DO NOT hallucinate missing contractor, vendor, payment, or physical project progress data.\n"
-            "3. If asked about contractors, tenders, or payments, state: 'Data not available in the connected official dataset.'\n"
-            "4. Never use the word 'fraud' — use 'statistical anomaly', 'allocation divergence', or 'review priority'.\n"
-            "5. Cite the official source: Allocated Limit for Honble MPs.csv."
+            "You have FULL READ ACCESS to all official MoSPI dataset records, state analytics, baseline metrics, and Scikit-Learn anomaly detection outputs.\n"
+            "INSTRUCTIONS:\n"
+            "1. Answer any analytical, comparative, statistical, or evaluative question thoroughly, accurately, and professionally.\n"
+            "2. Use the provided ground truth dataset context for exact numbers, MP names, allocations, state rankings, and risk scores.\n"
+            "3. DO NOT hallucinate missing contractor, vendor, payment, or physical project progress data.\n"
+            "4. If asked about contractors, tenders, or payments, state clearly: 'Data not available in the connected official dataset.'\n"
+            "5. Never use the word 'fraud' — use 'statistical anomaly', 'allocation divergence', or 'review priority'.\n"
+            "6. Cite the official source: Allocated Limit for Honble MPs.csv."
         )
 
         models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]
@@ -48,10 +49,10 @@ class AIInvestigator:
                         model=model_name,
                         messages=[
                             {"role": "system", "content": system_instruction},
-                            {"role": "user", "content": f"GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
+                            {"role": "user", "content": f"FULL READ-ONLY GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
                         ],
                         temperature=0.2,
-                        max_tokens=800
+                        max_tokens=900
                     )
                     if response.choices and response.choices[0].message.content:
                         return response.choices[0].message.content
@@ -71,10 +72,10 @@ class AIInvestigator:
                 "model": model_name,
                 "messages": [
                     {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": f"GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
+                    {"role": "user", "content": f"FULL READ-ONLY GROUND TRUTH CONTEXT:\n{context_str}\n\nUSER QUESTION: {user_prompt}"}
                 ],
                 "temperature": 0.2,
-                "max_tokens": 800
+                "max_tokens": 900
             }
             try:
                 resp = requests.post(url, headers=headers, json=payload, timeout=8)
@@ -102,7 +103,7 @@ class AIInvestigator:
         clean_prompt = html.escape(raw_prompt)
         raw_lower = clean_prompt.lower()
 
-        # Typo Normalization (hight -> high, rick -> risk, peopel -> people, lisst -> list)
+        # Typo Normalization (hight -> high, rick -> risk, peopel -> people, lisst -> list, malkagiri -> malkajgiri)
         prompt_lower = (
             raw_lower
             .replace("hight", "high")
@@ -154,36 +155,45 @@ class AIInvestigator:
         # Check for Groq API Key
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
         if groq_key:
-            # Build Rich Ground Truth Context for Groq LLM
+            # Build All-Powerful Read-Only Ground Truth Context for Groq LLM
             kpis = real_data_service.get_summary_kpis()
-            anomalies = anomaly_detector.fit_and_predict(real_data_service.df_mp)
+            df_mp = real_data_service.df_mp
+            anomalies = anomaly_detector.fit_and_predict(df_mp)
+            states_analytics = real_data_service.get_state_analytics()
             
-            # Find target MP if mentioned
+            # Find target MP/Constituency if mentioned
             target_mp = next((a for a in anomalies if str(a.get('mp_name')).lower() in prompt_lower or str(a.get('constituency')).lower() in prompt_lower), None)
 
             high_risk_list = [a for a in anomalies if a['risk_level'] in ['HIGH', 'CRITICAL']]
             high_risk_list.sort(key=lambda x: x['risk_score'], reverse=True)
-            top_hr = high_risk_list[:15]
+            top_hr = high_risk_list[:25]
 
             context_lines = [
-                f"- Total Monitored MPs: {kpis['total_mp_records']} across {kpis['unique_states_count']} States/UTs",
-                f"- Total National Allocation: ₹{kpis['total_allocation_crores']} Crore",
-                f"- Standard Baseline Limit: ₹14.70 Crore (holds for {kpis['baseline_mp_count_14_7cr']} MPs)",
-                f"- Highest Allocation MP: Eatala Rajender (Malkajgiri, Telangana) — ₹32.75 Crore",
-                f"- Lowest Allocation MP: Sk. Nurul Islam (Basirhat, West Bengal) — ₹4.90 Crore",
+                "=== MOSPI MPLADS SUMMARY STATISTICS ===",
+                f"- Total Monitored MP Seats: {kpis['total_mp_records']} across {kpis['unique_states_count']} States/UTs",
+                f"- Total National Allocation Limit: ₹{kpis['total_allocation_crores']} Crore (₹83,06,21,04,294.53)",
+                f"- Standard Baseline Entitlement Limit: ₹14.70 Crore (holds for {kpis['baseline_mp_count_14_7cr']} MPs)",
+                f"- Deviating Allocations Count: {kpis['total_mp_records'] - kpis['baseline_mp_count_14_7cr']} MPs (deviate above/below ₹14.70 Cr)",
+                f"- Highest Allocation MP: Eatala Rajender (Malkajgiri, Telangana) — ₹32.75 Crore (+122.79% above baseline)",
+                f"- Lowest Allocation MP: Sk. Nurul Islam (Basirhat, West Bengal) — ₹4.90 Crore (-66.67% below baseline)",
                 f"- Missing Allocation Record: Row #108, Nanded Constituency (Maharashtra) — Allocation is NaN/Unlisted",
-                f"- Flagged Anomalies Count: {len(high_risk_list)} MPs",
-                "\nTOP HIGH-RISK ALLOCATION RECORDS (FLAGGED ANOMALIES):"
+                f"- Total Flagged Anomalies Count: {len(high_risk_list)} MPs",
+                "\n=== STATE ALLOCATION LEADERBOARD (TOP 10 STATES) ==="
             ]
 
+            for s in states_analytics[:10]:
+                context_lines.append(f"  • {s['state']}: Total Allocation ₹{s['total_allocation_crores']} Cr across {s['mp_count']} MPs (Mean: ₹{s['mean_allocation_inr']/1e7:.2f} Cr | Baseline Compliance: {s['baseline_14_7cr_count']}/{s['mp_count']})")
+
+            context_lines.append("\n=== TOP 25 FLAGGED HIGH-RISK ANOMALY RECORDS ===")
             for idx, c in enumerate(top_hr, 1):
                 alloc_v = f"₹{c['allocated_amount_crores']:.2f} Cr" if c['allocated_amount_crores'] is not None else "Missing"
-                context_lines.append(f"  {idx}. MP: {c['mp_name']} | Constituency: {c['constituency']} ({c['state']}) | Allocation: {alloc_v} | Risk Score: {c['risk_score']}/100 ({c['risk_level']}) | Signal: {c['signal_type']}")
+                context_lines.append(f"  {idx}. MP: {c['mp_name']} | Constituency: {c['constituency']} ({c['state']}) | Allocation: {alloc_v} | Risk Score: {c['risk_score']}/100 ({c['risk_level']}) | Agreement: {c.get('multi_method_agreement', '2/3')} | Signal: {c['signal_type']}")
 
             if target_mp:
-                context_lines.append(f"\nTARGET RECORD DETAILS ({target_mp['mp_name']} - {target_mp['constituency']}, {target_mp['state']}):")
+                context_lines.append(f"\n=== SPECIFIC QUERY TARGET RECORD DETAILS ({target_mp['mp_name']} - {target_mp['constituency']}, {target_mp['state']}) ===")
                 context_lines.append(f"  - Allocated Amount: ₹{target_mp.get('allocated_amount_crores', 'N/A')} Cr")
                 context_lines.append(f"  - Baseline Deviation: {target_mp.get('dev_baseline_pct', 0.0):+.2f}%")
+                context_lines.append(f"  - State Divergence: {target_mp.get('dev_state_pct', 0.0):+.2f}% vs {target_mp['state']} mean")
                 context_lines.append(f"  - Risk Score: {target_mp.get('risk_score', 'N/A')}/100 ({target_mp.get('risk_level', 'N/A')})")
                 context_lines.append(f"  - Consensus: {target_mp.get('multi_method_agreement', 'N/A')}")
                 context_lines.append(f"  - Z-Score: {target_mp.get('z_score', 'N/A')}")
@@ -196,10 +206,10 @@ class AIInvestigator:
                     "answer": groq_response,
                     "is_grounded": True,
                     "query_type": "groq_llm_grounded",
-                    "tools_executed": ["GroqAPI(https://api.groq.com/openai/v1)", "Llama-3.3-70B-Versatile"],
-                    "evidence_used": [f"Groq Llama-3 Grounded Context ({len(context_lines)} metrics)"],
+                    "tools_executed": ["GroqAPI(https://api.groq.com/openai/v1)", "Llama-3.3-70B-Versatile", "RealDataService.FullRead"],
+                    "evidence_used": [f"Groq Llama-3 Full Grounded Dataset ({len(context_lines)} metrics & records)"],
                     "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
-                    "notice": "Grounded Groq Llama-3 AI Engine"
+                    "notice": "All-Powerful MoSPI AI Intelligence Engine"
                 }
 
         # LOCAL DETERMINISTIC ENGINE (FALLBACK / KEYLESS MODE)
