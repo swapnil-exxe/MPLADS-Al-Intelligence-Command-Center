@@ -24,14 +24,17 @@ class AIInvestigator:
         """Calls Groq OpenAI-compatible endpoint at https://api.groq.com/openai/v1 using OpenAI SDK client."""
         system_instruction = (
             "You are the official MoSPI MPLADS AI Intelligence Command Center Assistant.\n"
-            "You have FULL READ ACCESS to all official MoSPI dataset records, state analytics, baseline metrics, and Scikit-Learn anomaly detection outputs.\n"
+            "You operate on a TWO-LAYER Governance-Safe Anomaly and Investigation System.\n"
             "INSTRUCTIONS:\n"
             "1. Answer any analytical, comparative, statistical, or evaluative question thoroughly, accurately, and professionally.\n"
             "2. Use the provided ground truth dataset context for exact numbers, MP names, allocations, state rankings, and risk scores.\n"
-            "3. DO NOT hallucinate missing contractor, vendor, payment, or physical project progress data.\n"
-            "4. If asked about contractors, tenders, or payments, state clearly: 'Data not available in the connected official dataset.'\n"
-            "5. Never use the word 'fraud' — use 'statistical anomaly', 'allocation divergence', or 'review priority'.\n"
-            "6. Cite the official source: Allocated Limit for Honble MPs.csv."
+            "3. DO NOT accuse any MP, vendor, or official of 'fraud' or 'corruption'. You CANNOT determine guilt.\n"
+            "4. If asked 'Is this MP guilty of fraud?' or 'Is there proof of fraud?', respond: 'I cannot determine guilt. The available evidence shows [specific signals] linked to [specific official records]. This indicates a case requiring investigation by an authorized officer.'\n"
+            "5. If evidence is incomplete or work-level data is missing, respond: 'Insufficient evidence to determine fraud. Missing: [specific missing evidence].'\n"
+            "6. Forbidden terms: 'MP committed fraud', 'MP made fake bills', 'MP is corrupt', 'Fraud confirmed'.\n"
+            "7. Approved terms: 'Potential financial irregularity detected — requires authorized investigation.', 'High-risk case requiring authorized investigation.', 'Evidence mismatch requires verification.', 'Insufficient evidence to determine fraud.'\n"
+            "8. DO NOT hallucinate missing contractor, vendor, payment, or physical project progress data.\n"
+            "9. Cite the official source: Allocated Limit for Honble MPs.csv."
         )
 
         models_to_try = ["llama-3.3-70b-versatile", "llama3-70b-8192", "llama3-8b-8192"]
@@ -133,6 +136,19 @@ class AIInvestigator:
                 "evidence_used": ["Official MoSPI CSV Dataset (Allocated Limit for Honble MPs.csv)"],
                 "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
                 "notice": "Grounded AI Assistant Greeting"
+            }
+
+        # 0.1 EXPLICIT GOVERNANCE GUILT & FRAUD INQUIRY HANDLER
+        guilt_phrases = ["guilty", "is this fraud", "did he commit fraud", "proof of fraud", "is corrupt", "fake bill"]
+        if any(phrase in prompt_lower for phrase in guilt_phrases):
+            return {
+                "answer": "I cannot determine guilt. The available evidence shows statistical allocation signals linked to official MoSPI records. This indicates a case requiring investigation by an authorized officer. Insufficient evidence to determine fraud. Missing: Work-level eSAKSHI expenditure bills, vendor procurement contracts, physical completion certificates, and geotagged site inspection documents.",
+                "is_grounded": True,
+                "query_type": "governance_guilt_query",
+                "tools_executed": ["GovernanceSafetyPolicyCheck"],
+                "evidence_used": ["Official MoSPI CSV Dataset (Allocated Limit for Honble MPs.csv)"],
+                "source": "Allocated Limit for Honble MPs.csv (Official MoSPI Dataset)",
+                "notice": "Governance Non-Accusatory Requirement"
             }
 
         # 1. EXPLICIT BOUNDARY CHECK: Out-of-Scope Questions (Contractors, Tenders, Vendor Payments, GPS)

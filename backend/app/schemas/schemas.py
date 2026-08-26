@@ -1,5 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
+from app.schemas.layer2_schema import (
+    GovernanceInvestigationStatus,
+    WorkLevelRecord,
+    GovernanceInvestigationCase,
+    EvidenceFactor,
+    SignalDetail
+)
 
 class OverviewResponse(BaseModel):
     total_mp_records: int
