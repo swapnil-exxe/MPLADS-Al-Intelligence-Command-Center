@@ -139,7 +139,7 @@ class AIInvestigator:
             }
 
         # 0.1 EXPLICIT GOVERNANCE GUILT & FRAUD INQUIRY HANDLER
-        guilt_phrases = ["guilty", "is this fraud", "did he commit fraud", "proof of fraud", "is corrupt", "fake bill"]
+        guilt_phrases = ["guilty", "is this fraud", "did he commit fraud", "proof", "is corrupt", "fake bill", "evidence"]
         if any(phrase in prompt_lower for phrase in guilt_phrases):
             return {
                 "answer": "I cannot determine guilt. The available evidence shows statistical allocation signals linked to official MoSPI records. This indicates a case requiring investigation by an authorized officer. Insufficient evidence to determine fraud. Missing: Work-level eSAKSHI expenditure bills, vendor procurement contracts, physical completion certificates, and geotagged site inspection documents.",
